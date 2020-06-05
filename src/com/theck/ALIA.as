@@ -38,7 +38,11 @@ class com.theck.ALIA
 	}
 
 	public function Unload(){
-		WaypointInterface.SignalPlayfieldChanged.Disconnect(PlayfieldChanged, this);	
+		WaypointInterface.SignalPlayfieldChanged.Disconnect(PlayfieldChanged, this);
+		
+		lurker.SignalStatChanged.Disconnect(LurkerStatChanged, this);
+		lurker.SignalCharacterDied.Disconnect(ResetLurker, this);
+		lurker.SignalCharacterDestructed.Disconnect(ResetLurker2, this);
 	}
 	
 	public function Activate(config:Archive){
@@ -73,13 +77,15 @@ class com.theck.ALIA
 			
 		currentTarget = Character.GetCharacter(id);
 		Debugger.PrintText("Target Changed to " + currentTarget.GetName() );
-				
+			
+			// this needs to be localized
 			if (currentTarget.GetName() == "The Unutterable Lurker" && inNYR10) {
 				Debugger.PrintText("Your Target is E10 Lurker!!");
 				lurker = Character.GetCharacter(id);
 				lurker.SignalStatChanged.Connect(LurkerStatChanged, this);
 				lurker.SignalCharacterDied.Connect(ResetLurker, this);
 				lurker.SignalCharacterDestructed.Connect(ResetLurker2, this);
+				lurkerLocked = true;
 				Debugger.PrintText("Lurker Locked!!")
 			}
 		}
@@ -95,29 +101,28 @@ class com.theck.ALIA
 		
 		// Shadow Incoming at 26369244 (75%)
 		if (currentHP > 26369244 && currentHP < 28000000) {
-			com.GameInterface.UtilsBase.PrintChatText("Shadow Incoming")
+			com.GameInterface.UtilsBase.PrintChatText("Shadow Incoming");
 		}
 		
 		// First Personal Space at 23556525 (67%)
 		else if (currentHP >  23556525 && currentHP < 24500000 ) {
-			com.GameInterface.UtilsBase.PrintChatText("PS 1 incoming")
+			com.GameInterface.UtilsBase.PrintChatText("PS 1 incoming");
 		}
 		
 		// Second Personal Space at 15821546 (45%)
 		else if (currentHP > 15821546 && currentHP < 17000000 ) {
-			com.GameInterface.UtilsBase.PrintChatText("PS 2 incoming")
+			com.GameInterface.UtilsBase.PrintChatText("PS 2 incoming");
 		}
 		
 		// Third Personal Space at 8789478 (25%)
 		else if (currentHP > 8789478 && currentHP < 10000000 ) {
-			com.GameInterface.UtilsBase.PrintChatText("PS 3 incoming")
+			com.GameInterface.UtilsBase.PrintChatText("PS 3 incoming");
 		}
 		
 		// Final Resort at 1757950 (5%)
 		else if (currentHP > 1757950 && currentHP < 3000000 ) {
-			com.GameInterface.UtilsBase.PrintChatText("Final Resort incoming")
-		}		
-		
+			com.GameInterface.UtilsBase.PrintChatText("Final Resort incoming");
+		}
 	}
 	
 	public function ResetLurker()
@@ -126,6 +131,7 @@ class com.theck.ALIA
 		lurker.SignalStatChanged.Disconnect(LurkerStatChanged, this);
 		lurker.SignalCharacterDied.Disconnect(ResetLurker, this);
 		lurker.SignalCharacterDestructed.Disconnect(ResetLurker2, this);
+		lurkerLocked = false;
 	}
 	
 	public function ResetLurker2()
@@ -134,6 +140,6 @@ class com.theck.ALIA
 		lurker.SignalStatChanged.Disconnect(LurkerStatChanged, this);
 		lurker.SignalCharacterDied.Disconnect(ResetLurker, this);
 		lurker.SignalCharacterDestructed.Disconnect(ResetLurker2, this);
-		
+		lurkerLocked = false;		
 	}
 }
