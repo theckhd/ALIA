@@ -119,28 +119,28 @@ class com.theck.ALIA
 		}
 		
 		// First Personal Space at 23556525 (67%)
-		else if (currentHP >  23556525 && currentHP < 24500000 ) {
+		else if (currentHP < 24500000 && NYRE10_PS1) {
 			com.GameInterface.UtilsBase.PrintChatText("PS 1 incoming");
 			Debugger.ShowFifo("PS 1 Incoming");
 			NYRE10_PS1 = false;
 		}
 		
 		// Second Personal Space at 15821546 (45%)
-		else if (currentHP > 15821546 && currentHP < 17000000 ) {
+		else if (currentHP < 17000000 && NYRE10_PS1) {
 			com.GameInterface.UtilsBase.PrintChatText("PS 2 incoming");
 			Debugger.ShowFifo("PS 2 Incoming");
 			NYRE10_PS2 = false;
 		}
 		
 		// Third Personal Space at 8789478 (25%)
-		else if (currentHP > 8789478 && currentHP < 10000000 ) {
+		else if (currentHP < 10000000 && NYRE10_PS1) {
 			com.GameInterface.UtilsBase.PrintChatText("PS 3 incoming");
 			Debugger.ShowFifo("PS 3 Incoming");
 			NYRE10_PS3 = false;
 		}
 		
 		// Final Resort at 1757950 (5%)
-		else if (currentHP > 1757950 && currentHP < 3000000 ) {
+		else if (currentHP < 3000000 && NYRE10_FR) {
 			com.GameInterface.UtilsBase.PrintChatText("Final Resort incoming");
 			Debugger.ShowFifo("Final Resort Incoming");
 			NYRE10_FR = false;
