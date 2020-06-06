@@ -17,7 +17,6 @@ import com.theck.Utils.Debugger;
 
 class com.theck.ALIA 
 {
-	static var inNYR10:Boolean;
 	static var lurkerLocked:Boolean;
 	private var m_player:Character;
 	private var currentTarget:Character;
@@ -35,26 +34,33 @@ class com.theck.ALIA
 
 	public function Load(){
 		com.GameInterface.UtilsBase.PrintChatText("ALIA loaded")
-		WaypointInterface.SignalPlayfieldChanged.Connect(PlayfieldChanged, this);
-		m_player = Character.GetClientCharacter();
-		m_player.SignalOffensiveTargetChanged.Connect(TargetChanged, this)
-		//Targeting.SignalTargetChanged.Connect(TargetChanged, this);
-		PlayfieldChanged(m_player.GetPlayfieldID());
-		lurkerLocked = false;
 		
+		//can probably eliminate m_player eventually
+		m_player = Character.GetClientCharacter();		
+		lurkerLocked = false; // set locked flag to false
+		
+		// check for E10
+		if IsNYR10(m_player.GetPlayfieldID()) {
+			ConnectTargetChangedSignal()
+		}
+		
+		// for debugging only
+		if  IsNYRSM(m_player.GetPlayfieldID()) {
+			ConnectTargetChangedSignal()
+		}
+		
+		// Connect to PlayfieldChanged signal for hooking/unhooking TargetChanged
+		WaypointInterface.SignalPlayfieldChanged.Connect(PlayfieldChanged, this);
 	}
 
-	public function Unload(){
-		WaypointInterface.SignalPlayfieldChanged.Disconnect(PlayfieldChanged, this);
-		
-		lurker.SignalStatChanged.Disconnect(LurkerStatChanged, this);
-		lurker.SignalCharacterDied.Disconnect(ResetLurker, this);
-		lurker.SignalCharacterDestructed.Disconnect(ResetLurker2, this);
+	public function Unload(){		
+		// disconnect all signals
+		ResetLurker();
+		DisconnectTargetChangedSignal();
 	}
 	
 	public function Activate(config:Archive){
-		com.GameInterface.UtilsBase.PrintChatText("ALIA activated")
-	
+		com.GameInterface.UtilsBase.PrintChatText("ALIA activated")	
 	}
 
 	public function Deactivate():Archive{
@@ -64,21 +70,32 @@ class com.theck.ALIA
 	
 	static function IsNYR10(zone)
 	{
-		inNYR10 = zone == 5715; // E10 is 5715, E5 is 5710
-		return inNYR10;
+		return zone == 5715; // E10 is 5715
+	}
+	
+	static function IsNYRSM(zone)
+	{
+		return zone == 5710; //SM, E1, and E5 are all 5710
 	}
 	
 	public function PlayfieldChanged(zone)
 	{
 		if (IsNYR10(zone))
 		{
-			Debugger.PrintText("You have entered NYR");	
+			Debugger.PrintText("You have entered E10 NYR");	
+			ConnectTargetChangedSignal()
+		}
+		else
+		{		
+			// disconnect all signals
+			ResetLurker();
+			DisconnectTargetChangedSignal();
 		}
 	}
-	
+		
 	public function TargetChanged(id:ID32)
 	{	
-		Debugger.PrintText("Target Changed to " + id);
+		//Debugger.PrintText("Target Changed to " + id);
 		
 		if (!lurkerLocked && !id.IsNull()) {
 			
@@ -86,12 +103,16 @@ class com.theck.ALIA
 		Debugger.PrintText("Target Changed to " + currentTarget.GetName() );
 			
 			// this needs to be localized
-			if (currentTarget.GetName() == "The Unutterable Lurker" && inNYR10) {
+			if (currentTarget.GetName() == "The Unutterable Lurker") {
 				Debugger.PrintText("Your Target is E10 Lurker!!");
 				lurker = Character.GetCharacter(id);
 				lurker.SignalStatChanged.Connect(LurkerStatChanged, this);
+				
+				//Reset signal connections on lurker death or wipe
 				lurker.SignalCharacterDied.Connect(ResetLurker, this);
-				lurker.SignalCharacterDestructed.Connect(ResetLurker2, this);
+				lurker.SignalCharacterDestructed.Connect(ResetLurker, this);
+				
+				// lock on lurker, don't need to check targets anymore
 				lurkerLocked = true;
 				Debugger.PrintText("Lurker Locked!!")
 				
@@ -107,6 +128,8 @@ class com.theck.ALIA
 	public function LurkerStatChanged(stat)
 	{
 		//Debugger.PrintText("Lurker's Stats Changed");
+		
+		if (stat == 27) {
 		
 		// tested 6/5/2020: stat enum 1 is max health, stat enum 27 is current health
 		var currentHP = lurker.GetStat(27, 1);
@@ -126,14 +149,14 @@ class com.theck.ALIA
 		}
 		
 		// Second Personal Space at 15821546 (45%)
-		else if (currentHP < 17000000 && NYRE10_PS1) {
+		else if (currentHP < 17000000 && NYRE10_PS2) {
 			com.GameInterface.UtilsBase.PrintChatText("PS 2 incoming");
 			Debugger.ShowFifo("PS 2 Incoming");
 			NYRE10_PS2 = false;
 		}
 		
 		// Third Personal Space at 8789478 (25%)
-		else if (currentHP < 10000000 && NYRE10_PS1) {
+		else if (currentHP < 10000000 && NYRE10_PS3) {
 			com.GameInterface.UtilsBase.PrintChatText("PS 3 incoming");
 			Debugger.ShowFifo("PS 3 Incoming");
 			NYRE10_PS3 = false;
@@ -145,24 +168,27 @@ class com.theck.ALIA
 			Debugger.ShowFifo("Final Resort Incoming");
 			NYRE10_FR = false;
 		}
+		}
 	}
 	
 	public function ResetLurker()
 	{
-		Debugger.PrintText("Lurker died")
+		//Debugger.PrintText("Lurker signals disconnected")
 		lurker.SignalStatChanged.Disconnect(LurkerStatChanged, this);
 		lurker.SignalCharacterDied.Disconnect(ResetLurker, this);
-		lurker.SignalCharacterDestructed.Disconnect(ResetLurker2, this);
+		lurker.SignalCharacterDestructed.Disconnect(ResetLurker, this);
 		lurkerLocked = false;
 	}
 	
-	public function ResetLurker2()
+	public function ConnectTargetChangedSignal()
 	{
-		Debugger.PrintText("Lurker destructed")
-		Debugger.ShowFifo("Lurker destructed");
-		lurker.SignalStatChanged.Disconnect(LurkerStatChanged, this);
-		lurker.SignalCharacterDied.Disconnect(ResetLurker, this);
-		lurker.SignalCharacterDestructed.Disconnect(ResetLurker2, this);
-		lurkerLocked = false;		
+		m_player.SignalOffensiveTargetChanged.Connect(TargetChanged, this);
 	}
+	
+	
+	public function DisconnectTargetChangedSignal()
+	{
+		m_player.SignalOffensiveTargetChanged.Disconnect(TargetChanged, this);
+	}
+	
 }
