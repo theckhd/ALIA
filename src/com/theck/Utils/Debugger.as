@@ -6,7 +6,7 @@ import com.GameInterface.Log;
 */
 class com.theck.Utils.Debugger {
 	static function LogText(text) {
-		Log.Warning("ALIA", text)
+		Log.Warning("ALIA:", text)
 	}
 	static function PrintText(text) {
 		com.GameInterface.UtilsBase.PrintChatText("ALIA: " + string(text));
@@ -21,5 +21,9 @@ class com.theck.Utils.Debugger {
 	}
 	static function ShowFifo(text) {
 		Chat.SignalShowFIFOMessage.Emit(string(text),0);
+	}
+	
+	static function DebugText(text, flag) {
+		if flag { PrintText(text); }
 	}
 }
