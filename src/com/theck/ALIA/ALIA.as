@@ -25,6 +25,11 @@ class com.theck.ALIA.ALIA
 	static var lurkerLocked:Boolean;
 	static var debugMode:Boolean = true;
 	static var lurkerNameLocal:String = LDBFormat.LDBGetText(51000, 32030);
+	static var stringShadowOutOfTime:String = LDBFormat.LDBGetText(50210, 8934410); //"Shadow Out Of Time";
+	static var stringPersonalSpace:String = LDBFormat.LDBGetText(50210, 8934415); //"Personal Space";
+	static var stringFinalResort:String = LDBFormat.LDBGetText(50210, 7963851); //"Final Resort";
+	static var textDecayTime:Number = 15;
+	
 	private var m_player:Character;
 	private var lurker:Character;
 	private var controller:TextFieldController;
@@ -32,7 +37,8 @@ class com.theck.ALIA.ALIA
 	// GUI stuff
 	private var m_swfRoot:MovieClip;
     private var AnnounceText:TextField;
-	private var pos:flash.geom.Point;
+	private var m_pos:flash.geom.Point;
+	static var imminentColor:Number = 0xFF0000;
 	
 	// announcement flags
 	private var Announce_Shadow1:Boolean;
@@ -44,13 +50,10 @@ class com.theck.ALIA.ALIA
 	public function ALIA(swfRoot:MovieClip){
         m_swfRoot = swfRoot;
     }
-/*	
-	public function ALIA(){
-	
-	}
-*/
+
 	public function Load(){
-		Debugger.PrintText("ALIA loaded");
+		Debugger.PrintText("Loaded");
+		if (debugMode) {Debugger.DebugText("Debug mode enabled");}
 		
 		m_player = Character.GetClientCharacter();	//can probably eliminate m_player eventually	
 		lurkerLocked = false; // set locked flag to false
@@ -60,13 +63,12 @@ class com.theck.ALIA.ALIA
 			ConnectTargetChangedSignal()
 		}
 		
-		// for debugging only
-		/*if  IsNYRSM(m_player.GetPlayfieldID()) {
-			ConnectTargetChangedSignal()
-		}*/
-		
 		// Connect to PlayfieldChanged signal for hooking/unhooking TargetChanged
 		WaypointInterface.SignalPlayfieldChanged.Connect(PlayfieldChanged, this);
+		
+		//create text field
+		CreateTextField();
+		GlobalSignal.SignalSetGUIEditMode.Connect(GuiEdit, this);
 	}
 
 	public function Unload(){		
@@ -76,32 +78,43 @@ class com.theck.ALIA.ALIA
 	}
 	
 	public function Activate(config:Archive){
-		pos = Point(config.FindEntry("GUIPos", new Point(650, 0)));
-		Debugger.DebugText("ALIA activated", debugMode);
+		Debugger.DebugText("Activated", debugMode);
+		
+		// Move text to desired position
+		//m_pos = config.FindEntry("ALIA_textPosition"), new Point(650, 650));
+		m_pos = config.FindEntry("ALIA_textPosition");
+		Debugger.DebugText("x: " + m_pos.x + "  y: " + m_pos.y, debugMode);
+		controller.setPos(m_pos);
+		
+		// update visibility based on zone
+		controller.setVisible(IsNYR10(m_player.GetPlayfieldID()));
 	}
 
 	public function Deactivate():Archive{
+		Debugger.DebugText("Deactivated", debugMode);
+		
+		// save the current position in the config
 		var config = new Archive();
-		config.AddEntry("GUIPos", pos);
+		Debugger.DebugText("x: " + m_pos.x + "  y: " + m_pos.y, debugMode);
+		config.AddEntry("ALIA_textPosition", m_pos);
 		return config
 	}
 	
 	static function IsNYR10(zone)
 	{
-		return (debugMode || zone == 5715); // E10 is 5715
+		return (debugMode || zone == 5715); // E10 is 5715, SM, E1, and E5 are all 5710
 	}
-	
-	static function IsNYRSM(zone)
-	{
-		return zone == 5710; //SM, E1, and E5 are all 5710
-	}
-	
+		
 	public function PlayfieldChanged(zone)
 	{
+		// update text visibility
+		controller.setVisible(IsNYR10(zone));
+		
+		// if we're in NYR10, connect target changed signal for Lurker Locking
 		if (IsNYR10(zone))
 		{
 			Debugger.DebugText("You have entered E10 NYR", debugMode);	
-			ConnectTargetChangedSignal()
+			ConnectTargetChangedSignal();
 		}
 		else
 		{		
@@ -143,6 +156,7 @@ class com.theck.ALIA.ALIA
 				// store lurker variable, connect to statchanged signal
 				lurker = currentTarget;
 				lurker.SignalStatChanged.Connect(LurkerStatChanged, this);
+				lurker.SignalCommandStarted.Connect(LurkerCasting, this);
 				
 				//Connect deat/wipe signals to a function that resets signal connections 
 				lurker.SignalCharacterDied.Connect(ResetLurker, this);
@@ -171,98 +185,214 @@ class com.theck.ALIA.ALIA
 			// tested 6/5/2020: stat enum 1 is max health, stat enum 27 is current health
 			var currentHP = lurker.GetStat(27, 1);
 			var maxHP = lurker.GetStat(1, 1);
+			var pct = currentHP / maxHP;
+			//dDebugger.DebugText("Health % is " + pct * 100 + "%", debugMode);
 			
 			// Shadow Incoming at 26369244 (75%)
-			if (currentHP < maxHP * 0.78 && Announce_Shadow1) {
-				com.GameInterface.UtilsBase.PrintChatText("Shadow Incoming");
-				Debugger.ShowFifo("Shadow Incoming");
-				Announce_Shadow1 = false;
+			if (Announce_Shadow1) 
+			{
+				if (pct < 0.749 ) {
+					Announce_Shadow1 = false;
+				}
+				else if (pct < 0.955 ) {
+					UpdateBlink("Shadow Imminent! (75%)"); 
+				}
+				else if (pct < 0.98 ) {
+					UpdateText("Shadow Incoming (75%)");				
+				}
 			}
 			
 			// First Personal Space at 23556525 (67%)
-			else if (currentHP < maxHP * 0.70 && Announce_PS1) {
-				com.GameInterface.UtilsBase.PrintChatText("PS 1 incoming");
-				Debugger.ShowFifo("PS 1 Incoming");
-				Announce_PS1 = false;
+			if (Announce_PS1) 
+			{
+				if (pct < 0.67 ) {
+					Announce_PS1 = false;
+				}
+				else if (pct < 0.68 ) {
+					UpdateBlink("Personal Space 1 Imminent! (67%)"); 
+				}
+				else if (pct < 0.70 ) {
+					UpdateText("Personal Space 1 Incoming (67%)");				
+				}
 			}
 			
 			// Second Personal Space at 15821546 (45%)
-			else if (currentHP < maxHP * 0.48 && Announce_PS2) {
-				com.GameInterface.UtilsBase.PrintChatText("PS 2 incoming");
-				Debugger.ShowFifo("PS 2 Incoming");
-				Announce_PS2 = false;
+			if (Announce_PS2) 
+			{
+				if (pct < 0.45 ) {
+					Announce_PS2 = false;
+				}
+				else if (pct < 0.46 ) {
+					UpdateBlink("Personal Space 2 Imminent! (45%)"); 
+				}
+				else if (pct < 0.48 ) {
+					UpdateText("Personal Space 2 Incoming (45%)");				
+				}
 			}
 			
 			// Third Personal Space at 8789478 (25%)
-			else if (currentHP < maxHP * 0.28 && Announce_PS3) {
-				com.GameInterface.UtilsBase.PrintChatText("PS 3 incoming");
-				Debugger.ShowFifo("PS 3 Incoming");
-				Announce_PS3 = false;
+			if (Announce_PS3) 
+			{
+				if (pct < 0.25 ) {
+					Announce_PS3 = false;
+				}
+				else if (pct < 0.26 ) {
+					UpdateBlink("Personal Space 3 Imminent! (25%)"); 
+				}
+				else if (pct < 0.28 ) {
+					UpdateText("Personal Space 3 Incoming (25%)");				
+				}
 			}
 			
 			// Final Resort at 1757950 (5%)
-			else if (currentHP < maxHP * 0.08 && Announce_FR) {
-				com.GameInterface.UtilsBase.PrintChatText("Final Resort incoming");
-				Debugger.ShowFifo("Final Resort Incoming");
-				Announce_FR = false;
+			if (Announce_FR) 
+			{
+				if (pct < 0.05 ) {
+					Announce_FR = false;
+				}
+				else if (pct < 0.06 ) {
+					UpdateBlink("Final Resort Imminent! (5%)"); 
+				}
+				else if (pct < 0.08 ) {
+					UpdateText("Final Resort Incoming (5%)");				
+				}
 			}
 		}
+	}
+	
+	public function LurkerCasting(spell)
+	{
+		Debugger.DebugText("Lurker is casting " + spell, debugMode);
+		if (spell == stringShadowOutOfTime)
+		{	
+			// only decay on the first shadow
+			if (Announce_Shadow1) {
+				Announce_Shadow1 = false;
+				controller.decayText(3);
+			}
+		}
+		if (spell == stringPersonalSpace)
+		{
+			controller.decayText(3);			
+		}
+		if (spell == stringFinalResort)
+		{
+			Announce_FR = false;
+			controller.decayText(3);
+		}		
+	}
+	
+	private function UpdateText(text:String)
+	{
+		// print text to chat and update the text field
+		com.GameInterface.UtilsBase.PrintChatText(text);
+		controller.UpdateText(text);
+	}
+	
+	private function UpdateDecay(text:String)
+	{
+		// print text to chat and update the text field
+		com.GameInterface.UtilsBase.PrintChatText(text);
+		controller.UpdateText(text);		
+		controller.decayText(textDecayTime);
+	}
+	
+	private function UpdateBlink(text:String)
+	{
+		// print text to chat and update the text field
+		com.GameInterface.UtilsBase.PrintChatText(text);
+		controller.setTextColor( imminentColor );
+		controller.UpdateText(text);		
+		//controller.blinkText(); // not working yet
 	}
 	
 	public function ResetLurker()
 	{
 		Debugger.DebugText("Lurker signals disconnected, lurker unlocked", debugMode)
+		
+		// Disconnect all of the lurker-specific signals
 		lurker.SignalStatChanged.Disconnect(LurkerStatChanged, this);
 		lurker.SignalCharacterDied.Disconnect(ResetLurker, this);
 		lurker.SignalCharacterDestructed.Disconnect(ResetLurker, this);
+		
+		// unlock targeting
 		lurkerLocked = false;
 	}
 	
 	public function ConnectTargetChangedSignal()
 	{
-		m_player.SignalOffensiveTargetChanged.Connect(TargetChanged, this);
-		GlobalSignal.SignalSetGUIEditMode.Connect(GuiEdit, this);
-		CreateAnnouncement();
 		Debugger.DebugText("TargetChanged connected", debugMode)
+		
+		// connects to targetchanged signal to search for lurker
+		m_player.SignalOffensiveTargetChanged.Connect(TargetChanged, this);
 		
 	}
 	
 	
 	public function DisconnectTargetChangedSignal()
 	{
-		m_player.SignalOffensiveTargetChanged.Disconnect(TargetChanged, this);
 		Debugger.DebugText("TargetChanged disconnected", debugMode)
+		
+		// disconnect targetchanged signal (usually called only when leaving NYR)
+		m_player.SignalOffensiveTargetChanged.Disconnect(TargetChanged, this);
 	}
 	
 	
 	// GUI stuff
 	
-	public function CreateAnnouncement(){
-        controller = new TextFieldController(m_swfRoot);
-        controller.UpdateText("Final resort incoming");
+	public function CreateTextField()
+	{
+		Debugger.DebugText("Announcement GUI Created", debugMode);
+		
+		// if a text field doesn't already exist, create one
+		if !controller {
+			controller = new TextFieldController(m_swfRoot);
+			Debugger.DebugText("New controller created", debugMode);
+		}
+		
+		// Set default text
+        controller.UpdateText("A Lurker Is Announced");
+		controller.decayText(textDecayTime);
+		
+		// Call a GuiEdit to update visibility and such
         GuiEdit();
-		Debugger.DebugText("Announcement GUI Created");
     }
     
     public function StartDrag(){
+		Debugger.DebugText("StartDrag called", debugMode);
         controller.clip.startDrag();
     }
 
     public function StopDrag(){
+		Debugger.DebugText("StopDrag called", debugMode);
         controller.clip.stopDrag();
-        pos = Common.getOnScreen(controller.clip);
-        //store the pos in config when deactivating
+		
+		// grab position for config storage on Deactivate()
+        m_pos = Common.getOnScreen(controller.clip); // this seems to break randomly on reloadui or zoning? Almost as if it were grabbing the coordinates relative to where it started?
+		//m_pos = controller.getPos(); //this didn't work
+		Debugger.DebugText("x: " + m_pos.x + "  y: " + m_pos.y, debugMode);
     }
 
     public function GuiEdit(state:Boolean){
+		//Debugger.DebugText("GuiEdit called", debugMode);
 		if (state) {
+			//Debugger.DebugText("GuiEdit: state true", debugMode);
 			controller.clip.onPress = Delegate.create(this, StartDrag);
 			controller.clip.onRelease = Delegate.create(this, StopDrag);
+			controller.UpdateText("~~~~~ Move Me!! ~~~~~");
+			controller.setVisible(true);
+			controller.toggleBackground(true);
+			
 			
 		} else {
+			//Debugger.DebugText("GuiEdit: state false", debugMode);
 			controller.clip.stopDrag();
 			controller.clip.onPress = undefined;
 			controller.clip.onRelease = undefined;
+			controller.UpdateText("A Lurker Is Announced");
+			controller.decayText(textDecayTime);
+			controller.setVisible(IsNYR10(m_player.GetPlayfieldID()));
+			controller.toggleBackground(false);
 		}
     }
 	

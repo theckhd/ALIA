@@ -38,10 +38,11 @@
   <compileTargets>
     <compile path="src\Main.as" />
     <compile path="src\com\theck\Main.as" />
+    <compile path="src\com\theck\ALIA\Main.as" />
   </compileTargets>
   <!-- Assets to embed into the output SWF -->
   <library>
-    <!-- example: <asset path="..." id="..." update="..." glyphs="..." mode="..." place="..." sharepoint="..." /> -->
+    <asset path="src\assets\gfxfontlib.swf" update="D:\Secret World Legends\Data\Gui\Default\Flash\gfxfontlib.swf" />
   </library>
   <!-- Paths to exclude from the Project Explorer tree -->
   <hiddenPaths>
@@ -58,7 +59,7 @@ xcopy "$(ProjectDir)\src\mod\*.*" "./deployment/ALIA/*.*" /e /y</postBuildComman
   <!-- Other project options -->
   <options>
     <option showHiddenPaths="False" />
-    <option testMovie="Default" />
+    <option testMovie="Custom" />
     <option testMovieCommand="" />
   </options>
   <!-- Plugin storage -->
