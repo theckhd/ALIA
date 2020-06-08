@@ -11,7 +11,7 @@ import mx.utils.Delegate;
 class gui.theck.TextFieldController
 {
 	// toggle debug messages
-	static var debugMode = false;
+	static var debugMode = true;
 	
     public var clip:MovieClip;
     private var field:TextField;
@@ -35,16 +35,16 @@ class gui.theck.TextFieldController
     
     public function UpdateText(text){
 		Debugger.DebugText("UpdateText called", debugMode);
+		Tweener.removeAllTweens(true);
         field._alpha = 100;
         field.text = text;
 		field.textColor = 0xFFFFFF;
-		Tweener.removeAllTweens(true);
     }
 
 	public function decayText(decayTime){
 		Debugger.DebugText("decayText called", debugMode);
 		Tweener.addTween(field, {_alpha : 0, delay : 2, time : decayTime});	
-        setTimeout(Delegate.create(this, stopBlink), decayTime*1000 + 500);	
+        //setTimeout(Delegate.create(this, stopBlink), decayTime*1000 + 500);
 	}
 	
 	public function setPos(pos:Point)
@@ -104,16 +104,10 @@ class gui.theck.TextFieldController
         clearInterval(clip.blinkInterval);
         clip.transform.colorTransform = new ColorTransform();
     }
-	
-	public function enableHitTest()
+
+	public function enableInteraction(state:Boolean)
 	{
-		clip.hitTestDisable = false;
-		field.hitTestDisable = false;
-	}
-	
-	public function disableHitTest()
-	{
-		clip.hitTestDisable = true;
-		field.hitTestDisable = true;
+		clip.hitTestDisable = !state;
+		field.hitTestDisable = !state;
 	}
 }
