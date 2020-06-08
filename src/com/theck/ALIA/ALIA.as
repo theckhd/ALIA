@@ -22,13 +22,15 @@ import flash.geom.Point;
 
 class com.theck.ALIA.ALIA 
 {
+	// toggle debug messages and enable addon outisde of NYR
+	static var debugMode:Boolean = false;
+	
 	static var lurkerLocked:Boolean;
-	static var debugMode:Boolean = true;
 	static var lurkerNameLocal:String = LDBFormat.LDBGetText(51000, 32030);
 	static var stringShadowOutOfTime:String = LDBFormat.LDBGetText(50210, 8934410); //"Shadow Out Of Time";
 	static var stringPersonalSpace:String = LDBFormat.LDBGetText(50210, 8934415); //"Personal Space";
 	static var stringFinalResort:String = LDBFormat.LDBGetText(50210, 7963851); //"Final Resort";
-	static var textDecayTime:Number = 15;
+	static var textDecayTime:Number = 10;
 	
 	private var m_player:Character;
 	private var lurker:Character;
@@ -41,11 +43,11 @@ class com.theck.ALIA.ALIA
 	static var imminentColor:Number = 0xFF0000;
 	
 	// announcement flags
-	private var Announce_Shadow1:Boolean;
-	private var Announce_PS1:Boolean;
-	private var Announce_PS2:Boolean;
-	private var Announce_PS3:Boolean;
-	private var Announce_FR:Boolean;
+	private var Ann_SB1:Array = new Array(true, true, true, true); // order: incomingCheck, imminentCheck, healthCheck, castCheck
+	private var Ann_FR:Array = new Array(true, true, true, true);
+	private var Ann_PS1:Array = new Array(true, true, true); // order: incomingCheck, imminentCheck, healthCheck
+	private var Ann_PS2:Array = new Array(true, true, true);
+	private var Ann_PS3:Array = new Array(true, true, true);
 	
 	public function ALIA(swfRoot:MovieClip){
         m_swfRoot = swfRoot;
@@ -59,7 +61,7 @@ class com.theck.ALIA.ALIA
 		lurkerLocked = false; // set locked flag to false
 		
 		// check for E10
-		if IsNYR10(m_player.GetPlayfieldID()) {
+		if IsNYR(m_player.GetPlayfieldID()) {
 			ConnectTargetChangedSignal()
 		}
 		
@@ -69,6 +71,20 @@ class com.theck.ALIA.ALIA
 		//create text field
 		CreateTextField();
 		GlobalSignal.SignalSetGUIEditMode.Connect(GuiEdit, this);
+		
+		
+		
+		// debugging text strings
+		Debugger.DebugText("~~~Text String testing~~", debugMode);
+		Debugger.DebugText("shadow: " + stringShadowOutOfTime, debugMode);
+		Debugger.DebugText("ps: " + stringPersonalSpace, debugMode);
+		Debugger.DebugText("shadow: " + stringFinalResort, debugMode);
+		// these all give "The Unutterable Lurker"
+		Debugger.DebugText("51000,32030 is " + LDBFormat.LDBGetText(51000, 32030),debugMode);
+		Debugger.DebugText("51000,32433 is " + LDBFormat.LDBGetText(51000, 32433),debugMode);
+		Debugger.DebugText("51000,32030 is " + LDBFormat.LDBGetText(51000, 32030),debugMode); 
+		Debugger.DebugText("~~~~~~~~~~~~~~~~~~~~~~~", debugMode);
+		
 	}
 
 	public function Unload(){		
@@ -87,7 +103,7 @@ class com.theck.ALIA.ALIA
 		controller.setPos(m_pos);
 		
 		// update visibility based on zone
-		controller.setVisible(IsNYR10(m_player.GetPlayfieldID()));
+		controller.setVisible(IsNYR(m_player.GetPlayfieldID()));
 	}
 
 	public function Deactivate():Archive{
@@ -104,14 +120,19 @@ class com.theck.ALIA.ALIA
 	{
 		return (debugMode || zone == 5715); // E10 is 5715, SM, E1, and E5 are all 5710
 	}
+	static function IsNYR(zone)
+	{
+		return (debugMode || IsNYR10(zone) || zone == 5710); // E10 is 5715, SM, E1, and E5 are all 5710
+	}
 		
 	public function PlayfieldChanged(zone)
 	{
 		// update text visibility
 		controller.setVisible(IsNYR10(zone));
+		controller.stopBlink();
 		
 		// if we're in NYR10, connect target changed signal for Lurker Locking
-		if (IsNYR10(zone))
+		if (IsNYR(zone))
 		{
 			Debugger.DebugText("You have entered E10 NYR", debugMode);	
 			ConnectTargetChangedSignal();
@@ -128,12 +149,6 @@ class com.theck.ALIA.ALIA
 	{	
 		//Debugger.DebugText("TargetChanged id passed is " + id,debugMode);
 		
-		/*
-		// these all give "The Unutterable Lurker"
-		Debugger.DebugText("51000,32030 is " + LDBFormat.LDBGetText(51000, 32030),debugMode);
-		Debugger.DebugText("51000,32433 is " + LDBFormat.LDBGetText(51000, 32433),debugMode);
-		Debugger.DebugText("51000,32030 is " + LDBFormat.LDBGetText(51000, 32030),debugMode); 
-		*/
 		
 		// If we haven't yet locked on to lurker and this id is useful
 		if (!lurkerLocked && !id.IsNull()) {
@@ -167,13 +182,18 @@ class com.theck.ALIA.ALIA
 				Debugger.DebugText("Lurker Locked!!", debugMode)
 				
 				//set flags for announcements to true
-				Announce_Shadow1 = true;
-				Announce_PS1 = true;
-				Announce_PS2 = true;
-				Announce_PS3 = true;
-				Announce_FR = true;
+				ResetAnnounceFlags();
 			}
 		}
+	}
+	
+	public function ResetAnnounceFlags()
+	{
+		Ann_SB1 = [true, true, true, true];
+		Ann_PS1 = [true, true, true];
+		Ann_PS2 = [true, true, true];
+		Ann_PS3 = [true, true, true];
+		Ann_FR = [true, true, true, true];
 	}
 	
 	public function LurkerStatChanged(stat)
@@ -189,72 +209,97 @@ class com.theck.ALIA.ALIA
 			//dDebugger.DebugText("Health % is " + pct * 100 + "%", debugMode);
 			
 			// Shadow Incoming at 26369244 (75%)
-			if (Announce_Shadow1) 
+			if (Ann_SB1[2]) 
 			{
 				if (pct < 0.749 ) {
-					Announce_Shadow1 = false;
+					Ann_SB1[2] = false;
+					Ann_SB1[1] = false;
+					Ann_SB1[0] = false;
 				}
-				else if (pct < 0.955 ) {
+				else if (Ann_SB1[1] && pct < 0.955 ) {
 					UpdateBlink("Shadow Imminent! (75%)"); 
+					Ann_SB1[1] = false;
+					Ann_SB1[0] = false;
 				}
-				else if (pct < 0.98 ) {
-					UpdateText("Shadow Incoming (75%)");				
+				else if (Ann_SB1[0] && pct < 0.98 ) {
+					UpdateText("Shadow Incoming (75%)");
+					Ann_SB1[0] = false;
 				}
 			}
 			
 			// First Personal Space at 23556525 (67%)
-			if (Announce_PS1) 
+			if ( Ann_PS1[2] && IsNYR10(m_player.GetPlayfieldID()) ) 
 			{
 				if (pct < 0.67 ) {
-					Announce_PS1 = false;
+					Ann_PS1[2] = false;
+					Ann_PS1[1] = false;
+					Ann_PS1[0] = false;
 				}
-				else if (pct < 0.68 ) {
+				else if (Ann_PS1[1] && pct < 0.68 ) {
 					UpdateBlink("Personal Space 1 Imminent! (67%)"); 
+					Ann_PS1[1] = false;
+					Ann_PS1[0] = false;
 				}
-				else if (pct < 0.70 ) {
-					UpdateText("Personal Space 1 Incoming (67%)");				
+				else if (Ann_PS1[0] && pct < 0.70 ) {
+					UpdateText("Personal Space 1 Incoming (67%)");	
+					Ann_PS1[0] = false;
 				}
 			}
 			
 			// Second Personal Space at 15821546 (45%)
-			if (Announce_PS2) 
+			if (Ann_PS2[2] && IsNYR10(m_player.GetPlayfieldID())) 
 			{
 				if (pct < 0.45 ) {
-					Announce_PS2 = false;
+					Ann_PS2[2] = false;
+					Ann_PS2[1] = false;
+					Ann_PS2[0] = false;
 				}
-				else if (pct < 0.46 ) {
+				else if (Ann_PS2[1] && pct < 0.46 ) {
 					UpdateBlink("Personal Space 2 Imminent! (45%)"); 
+					Ann_PS2[1] = false;
+					Ann_PS2[0] = false;
 				}
-				else if (pct < 0.48 ) {
-					UpdateText("Personal Space 2 Incoming (45%)");				
+				else if (Ann_PS2[0] && pct < 0.48 ) {
+					UpdateText("Personal Space 2 Incoming (45%)");	
+					Ann_PS2[0] = false;
 				}
 			}
 			
 			// Third Personal Space at 8789478 (25%)
-			if (Announce_PS3) 
+			if (Ann_PS3[2] && IsNYR10(m_player.GetPlayfieldID())) 
 			{
 				if (pct < 0.25 ) {
-					Announce_PS3 = false;
+					Ann_PS3[2] = false;
+					Ann_PS3[1] = false;
+					Ann_PS3[0] = false;			
 				}
-				else if (pct < 0.26 ) {
-					UpdateBlink("Personal Space 3 Imminent! (25%)"); 
+				else if (Ann_PS3[1] && pct < 0.26 ) {
+					UpdateBlink("Personal Space 3 Imminent! (25%)");
+					Ann_PS3[1] = false;
+					Ann_PS3[0] = false;			
 				}
-				else if (pct < 0.28 ) {
-					UpdateText("Personal Space 3 Incoming (25%)");				
+				else if (Ann_PS3[0] && pct < 0.28 ) {
+					UpdateText("Personal Space 3 Incoming (25%)");	
+					Ann_PS3[0] = false;			
 				}
 			}
 			
 			// Final Resort at 1757950 (5%)
-			if (Announce_FR) 
+			if (Ann_FR[2]) 
 			{
-				if (pct < 0.05 ) {
-					Announce_FR = false;
+				if (pct < 0.04 ) {
+					Ann_FR[2] = false;
+					Ann_FR[1] = false;
+					Ann_FR[0] = false;				
 				}
-				else if (pct < 0.06 ) {
+				else if (Ann_FR[1] && pct < 0.055 ) {
 					UpdateBlink("Final Resort Imminent! (5%)"); 
+					Ann_FR[1] = false;
+					Ann_FR[0] = false;				
 				}
-				else if (pct < 0.08 ) {
-					UpdateText("Final Resort Incoming (5%)");				
+				else if (Ann_FR[0] && pct < 0.07 ) {
+					UpdateText("Final Resort Incoming (5%)");
+					Ann_FR[0] = false;				
 				}
 			}
 		}
@@ -266,8 +311,8 @@ class com.theck.ALIA.ALIA
 		if (spell == stringShadowOutOfTime)
 		{	
 			// only decay on the first shadow
-			if (Announce_Shadow1) {
-				Announce_Shadow1 = false;
+			if (Ann_SB1[3]) {
+				Ann_SB1[3] = false;
 				controller.decayText(3);
 			}
 		}
@@ -277,8 +322,9 @@ class com.theck.ALIA.ALIA
 		}
 		if (spell == stringFinalResort)
 		{
-			Announce_FR = false;
 			controller.decayText(3);
+			controller.stopBlink();
+			controller.setTextColor(0xFF0000);
 		}		
 	}
 	
@@ -286,6 +332,7 @@ class com.theck.ALIA.ALIA
 	{
 		// print text to chat and update the text field
 		com.GameInterface.UtilsBase.PrintChatText(text);
+		controller.stopBlink();
 		controller.UpdateText(text);
 	}
 	
@@ -303,7 +350,7 @@ class com.theck.ALIA.ALIA
 		com.GameInterface.UtilsBase.PrintChatText(text);
 		controller.setTextColor( imminentColor );
 		controller.UpdateText(text);		
-		//controller.blinkText(); // not working yet
+		controller.blinkText(); 
 	}
 	
 	public function ResetLurker()
@@ -317,6 +364,9 @@ class com.theck.ALIA.ALIA
 		
 		// unlock targeting
 		lurkerLocked = false;
+		
+		// disable blinking
+		controller.stopBlink();
 	}
 	
 	public function ConnectTargetChangedSignal()
@@ -369,30 +419,40 @@ class com.theck.ALIA.ALIA
 		
 		// grab position for config storage on Deactivate()
         m_pos = Common.getOnScreen(controller.clip); // this seems to break randomly on reloadui or zoning? Almost as if it were grabbing the coordinates relative to where it started?
+		//m_pos.x += controller.clip._width / 2;
 		//m_pos = controller.getPos(); //this didn't work
-		Debugger.DebugText("x: " + m_pos.x + "  y: " + m_pos.y, debugMode);
+		Debugger.DebugText("StopDrag: x: " + m_pos.x + "  y: " + m_pos.y, debugMode);
     }
 
     public function GuiEdit(state:Boolean){
 		//Debugger.DebugText("GuiEdit called", debugMode);
-		if (state) {
-			//Debugger.DebugText("GuiEdit: state true", debugMode);
-			controller.clip.onPress = Delegate.create(this, StartDrag);
-			controller.clip.onRelease = Delegate.create(this, StopDrag);
-			controller.UpdateText("~~~~~ Move Me!! ~~~~~");
-			controller.setVisible(true);
-			controller.toggleBackground(true);
-			
-			
-		} else {
-			//Debugger.DebugText("GuiEdit: state false", debugMode);
-			controller.clip.stopDrag();
-			controller.clip.onPress = undefined;
-			controller.clip.onRelease = undefined;
-			controller.UpdateText("A Lurker Is Announced");
-			controller.decayText(textDecayTime);
-			controller.setVisible(IsNYR10(m_player.GetPlayfieldID()));
-			controller.toggleBackground(false);
+		controller.setVisible(IsNYR(m_player.GetPlayfieldID()));
+		
+		//only editable in NYR
+		if IsNYR(m_player.GetPlayfieldID()) 
+		{
+			if (state) {
+				Debugger.DebugText("GuiEdit: state true", debugMode);
+				controller.clip.onPress = Delegate.create(this, StartDrag);
+				controller.clip.onRelease = Delegate.create(this, StopDrag);
+				controller.UpdateText("~~~~~ Move Me!! ~~~~~");
+				controller.setVisible(true);
+				controller.toggleBackground(true);
+				controller.enableHitTest();
+				controller.stopBlink();
+				
+				
+			} else {
+				Debugger.DebugText("GuiEdit: state false", debugMode);
+				controller.clip.stopDrag();
+				controller.clip.onPress = undefined;
+				controller.clip.onRelease = undefined;
+				controller.UpdateText("A Lurker Is Announced");
+				controller.decayText(textDecayTime);
+				controller.toggleBackground(false);
+				controller.disableHitTest();
+				controller.stopBlink();
+			}
 		}
     }
 	
