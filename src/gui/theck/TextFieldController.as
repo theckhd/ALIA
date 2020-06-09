@@ -18,9 +18,9 @@ class gui.theck.TextFieldController
 	//private var defaultTextFormat:TextFormat = new TextFormat("_StandardFont", 30,0xFFFFFF, true);
 	//private var redTextFormat:TextFormat = new TextFormat("_StandardFont", 30,0xFF0000, true);
     
-    public function TextFieldController(target:MovieClip) 
+    public function TextFieldController(target:MovieClip, fieldName:String) 
     {
-        clip = target.createEmptyMovieClip("TextContainer", target.getNextHighestDepth());
+        clip = target.createEmptyMovieClip(fieldName, target.getNextHighestDepth());
         var textFormat:TextFormat = new TextFormat("_StandardFont", 30,0xFFFFFF, true);
         textFormat.align = "center"
         field = clip.createTextField("m_Text", clip.getNextHighestDepth(), 0, 0, 0, 0);
@@ -35,7 +35,7 @@ class gui.theck.TextFieldController
     
     public function UpdateText(text){
 		Debugger.DebugText("UpdateText called", debugMode);
-		Tweener.removeAllTweens(true);
+		Tweener.removeTweens(field);
         field._alpha = 100;
         field.text = text;
 		field.textColor = 0xFFFFFF;
