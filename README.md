@@ -1,7 +1,7 @@
 # A Lurker Is Announced (ALIA)
 This Secret World Legends addon provides announcements for important events in the Manhattan Exclusion Zone.
 
-(screenshot)
+![Screenshot of addon during encounter](alia_ps.png)
 
 Currently there are two text fields that appear:
 - A health display 
@@ -19,6 +19,6 @@ The displays only appear when in the Manhattan Exclusion Zone, the addon basical
 
 The displays can be moved (click & drag) in GUIEdit mode, and save their position between sessions.
 
-(screenshot)
+![Screenshot in GUIEdit Mode](alia_guiedit.png)
 
 There are no user-configurable options at this time.
