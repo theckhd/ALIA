@@ -5,7 +5,7 @@
 
 import com.GameInterface.Game.Character;
 import com.Utils.ID32;
-import com.GameInterface.WaypointInterface;
+//import com.GameInterface.WaypointInterface;
 import com.Utils.Archive;
 import com.Utils.LDBFormat;
 import com.Utils.GlobalSignal;
@@ -19,7 +19,7 @@ import flash.geom.Point;
 class com.theck.ALIA.ALIA 
 {
 	// toggle debug messages and enable addon outisde of NYR
-	static var debugMode:Boolean = true;
+	static var debugMode:Boolean = false;
 	
 	// basic settings and text strings
 	static var lurkerNameLocalized:String = LDBFormat.LDBGetText(51000, 32030);
@@ -39,8 +39,8 @@ class com.theck.ALIA.ALIA
 	private var m_pos:flash.geom.Point;
 	private var ph_pos:flash.geom.Point;
 	private var warningController:TextFieldController;
-	private var pctHealthController:TextFieldController;
-	private var updatePercentHealthDisplay:Boolean;
+	//private var pctHealthController:TextFieldController;
+	//private var updatePercentHealthDisplay:Boolean;
 	
 	// logic flags
 	private var lurkerLocked:Boolean;
@@ -84,14 +84,15 @@ class com.theck.ALIA.ALIA
 		lurkerLocked = false;
 		
 		// Connect to PlayfieldChanged signal for hooking/unhooking TargetChanged
-		WaypointInterface.SignalPlayfieldChanged.Connect(PlayfieldChanged, this);
+		//WaypointInterface.SignalPlayfieldChanged.Connect(PlayfieldChanged, this);
 		
-		// Check Playfield
-		PlayfieldChanged();
 		
 		//create text field, connect to GuiEdit
-		CreateTextField();
+		CreateTextFields();
 		GlobalSignal.SignalSetGUIEditMode.Connect(GuiEdit, this);
+		
+		// Check for TargetChanged signal connection
+		CheckForSignalHookup();
 			
 		// debugging text strings
 		Debugger.DebugText("~~~Text String testing~~", debugMode);
@@ -106,7 +107,7 @@ class com.theck.ALIA.ALIA
 	}
 
 	public function Unload(){		
-		Debugger.PrintText("Unload()");
+		Debugger.DebugText("Unload()");
 		
 		// disconnect all signals
 		ResetLurker();
@@ -122,10 +123,12 @@ class com.theck.ALIA.ALIA
 		Debugger.DebugText("Activate wPosition: x= " + m_pos.x + "  y= " + m_pos.y, debugMode);
 		warningController.setPos(m_pos);
 		
-		ph_pos = config.FindEntry("ALIA_phTextPosition", new Point(800, 800));
-		Debugger.DebugText("Activate wPosition: x= " + ph_pos.x + "  y= " + ph_pos.y, debugMode);
-		pctHealthController.setPos(ph_pos);
+		//ph_pos = config.FindEntry("ALIA_phTextPosition", new Point(800, 800));
+		//Debugger.DebugText("Activate wPosition: x= " + ph_pos.x + "  y= " + ph_pos.y, debugMode);
+		//pctHealthController.setPos(ph_pos);
 		
+		/*  Eventually I'll store these in the config (once I have slash commands to edit them)
+			For now, just hardcoding everything to make it easier to tweak during testing
 		// Set "Now" thresholds - this set is the actual threshold for casts
 		pct_SB1_Now = config.FindEntry("pct_SB1_Now", 0.75);
 		pct_PS1_Now = config.FindEntry("pct_PS1_Now", 0.67);
@@ -139,10 +142,22 @@ class com.theck.ALIA.ALIA
 		pct_PS2_Soon = config.FindEntry("pct_PS2_Soon", pct_PS2_Now + 0.03);
 		pct_PS3_Soon = config.FindEntry("pct_PS3_Soon", pct_PS3_Now + 0.03);
 		pct_FR_Soon  = config.FindEntry("pct_FR_Soon" , pct_FR_Now  + 0.025);
+		*/
+		pct_SB1_Now = 0.75;
+		pct_PS1_Now = 0.67;
+		pct_PS2_Now = 0.45;
+		pct_PS3_Now = 0.25;
+		pct_FR_Now  = 0.025;
 		
-		// update visibility based on zone
-		warningController.setVisible( IsNYR() );
-		pctHealthController.setVisible( IsNYR() );
+		// Set "Soon" thresholds - this is when the Soon warning occurs
+		pct_SB1_Soon = pct_SB1_Now + 0.03;
+		pct_PS1_Soon = pct_PS1_Now + 0.02;
+		pct_PS2_Soon = pct_PS2_Now + 0.03;
+		pct_PS3_Soon = pct_PS3_Now + 0.03;
+		pct_FR_Soon  = pct_FR_Now  + 0.025;
+		
+		// Check for TargetChanged signal connection
+		CheckForSignalHookup();
 	}
 
 	public function Deactivate():Archive{
@@ -153,10 +168,10 @@ class com.theck.ALIA.ALIA
 		Debugger.DebugText("Deactivate warning position: x= " + m_pos.x + "  y= " + m_pos.y, debugMode);
 		config.AddEntry("ALIA_wTextPosition", m_pos);
 		
-		Debugger.DebugText("Deactivate ph position: x= " + ph_pos.x + "  y= " + ph_pos.y, debugMode);
-		config.AddEntry("ALIA_phTextPosition", ph_pos);
+		//Debugger.DebugText("Deactivate ph position: x= " + ph_pos.x + "  y= " + ph_pos.y, debugMode);
+		//config.AddEntry("ALIA_phTextPosition", ph_pos);
 		
-		//save all of the thresholds
+/*		//save all of the thresholds
 		config.AddEntry("pct_SB1_Now", pct_SB1_Now);
 		config.AddEntry("pct_PS1_Now", pct_PS1_Now);
 		config.AddEntry("pct_PS2_Now", pct_PS2_Now);
@@ -166,7 +181,7 @@ class com.theck.ALIA.ALIA
 		config.AddEntry("pct_PS1_Soon", pct_PS1_Soon);
 		config.AddEntry("pct_PS2_Soon", pct_PS2_Soon);
 		config.AddEntry("pct_PS3_Soon", pct_PS3_Soon);
-		config.AddEntry("pct_FR_Soon" , pct_FR_Soon);
+		config.AddEntry("pct_FR_Soon" , pct_FR_Soon);*/
 		
 		return config
 	}
@@ -181,17 +196,19 @@ class com.theck.ALIA.ALIA
 		return (debugMode || IsNYR10() || zone == 5710); // SM, E1, and E5 are all 5710
 	}
 		
-	public function PlayfieldChanged()
+/*	public function PlayfieldChanged()
 	{
-		// update text visibility & blink state
-		warningController.setVisible( IsNYR10() );
-		warningController.stopBlink();
-		pctHealthController.setVisible( IsNYR10() );
+		Debugger.DebugText("PlayfieldChanged()", debugMode);	
+		//pctHealthController.setVisible( IsNYR10() ); // TODO: uncomment once it's fixed
 		
-		// if we're in NYR10, connect target changed signal for Lurker Locking
+	}
+	*/
+	public function CheckForSignalHookup()
+	{	
+		// if in NYR, connect to the TargetChanged signal 
 		if (IsNYR())
 		{
-			Debugger.DebugText("You have entered E10 NYR", debugMode);	
+			Debugger.DebugText("You have entered NYR", debugMode);	
 			ConnectTargetChangedSignal();
 		}
 		else
@@ -200,6 +217,12 @@ class com.theck.ALIA.ALIA
 			ResetLurker();
 			DisconnectTargetChangedSignal();
 		}
+		
+		// update visibility  & blink state
+		warningController.setVisible( IsNYR() );
+		warningController.stopBlink();		
+		//pctHealthController.setVisible( IsNYR() ); // TODO: uncomment once it's fixed
+		//pctHealthController.setVisible(debugMode); // TODO: delete when it's fixed
 	}
 	
 	public function ResetAnnounceFlags()
@@ -249,13 +272,13 @@ class com.theck.ALIA.ALIA
 				
 				// Lock on lurker so that we don't continue to check targets anymore
 				lurkerLocked = true;
-				updatePercentHealthDisplay = true;
+				//updatePercentHealthDisplay = true;
 				Debugger.DebugText("Lurker Locked!!", debugMode)
 			}
 		}
 	}
 	
-	public function updatePercentHealthFlag() { updatePercentHealthDisplay = true; }
+	//public function updatePercentHealthFlag() { updatePercentHealthDisplay = true; }
 	
 	public function LurkerStatChanged(stat)
 	{
@@ -270,7 +293,11 @@ class com.theck.ALIA.ALIA
 			
 			// throttle display updates to every 250 ms
 			//if (updatePercentHealthDisplay) {
+			
+				// pick one of these two
 				//pctHealthController.UpdateText( Math.round(pct * 1000) / 10 + "%");
+				//UpdatePctHealthDisplay(Math.round(pct * 1000) / 10 + "%");
+				
 				//updatePercentHealthDisplay = false;
 				//setTimeout(Delegate.create(this, updatePercentHealthFlag), 250 );
 			//}
@@ -332,15 +359,15 @@ class com.theck.ALIA.ALIA
 				Ann_PS3_Now = false;
 			}
 				
-			// Final Resort at 1757950 (5%)
+			// Final Resort at 1757950 (5%) - actually this seems to happen between 2.5% and 3%
 			if (Ann_FR_Soon && pct < pct_FR_Soon ) 
 			{
-				UpdateWarning("Final Resort Soon (5%)");
+				UpdateWarning("Final Resort Soon (3%)");
 				Ann_FR_Soon = false;				
 			}
 			else if (Ann_FR_Now && pct < pct_FR_Now ) 
 			{
-				UpdateWarningWithBlink("Final Resort Now! (5%)"); 
+				UpdateWarningWithBlink("Final Resort Now! (3%)"); 
 				Ann_FR_Now = false;			
 			}
 		}
@@ -351,9 +378,9 @@ class com.theck.ALIA.ALIA
 		Debugger.DebugText("Lurker is casting " + spell, debugMode);
 		
 		// only decay on the first shadow
-		Debugger.DebugText("SB1_Cast is " + SB1_Cast, debugMode);
-		Debugger.DebugText("string SoT is " + stringShadowOutOfTime, debugMode);
-		Debugger.DebugText("test is " + ( spell == stringShadowOutOfTime ), debugMode);
+		//Debugger.DebugText("SB1_Cast is " + SB1_Cast, debugMode);
+		//Debugger.DebugText("string SoT is " + stringShadowOutOfTime, debugMode);
+		//Debugger.DebugText("test is " + ( spell == stringShadowOutOfTime ), debugMode);
 		if ( !SB1_Cast && ( spell == stringShadowOutOfTime ) )
 		{	
 			SB1_Cast = true;
@@ -413,30 +440,36 @@ class com.theck.ALIA.ALIA
 	
 	////// GUI stuff //////
 	
-	public function CreateTextField()
+	public function CreateTextFields()
 	{
-		Debugger.DebugText("Announcement GUI Created", debugMode);
+		Debugger.DebugText("CreateTextFields()", debugMode);
 		
 		// if a text field doesn't already exist, create one
 		if !warningController {
 			warningController = new TextFieldController(m_swfRoot);
-			Debugger.DebugText("New controller created", debugMode);
+			Debugger.DebugText("Warning Controller created", debugMode);
 		}
 		
-		// if pct health display doesn't already exist, create one
-		if !pctHealthController {
-			pctHealthController = new TextFieldController(m_swfRoot);
-			Debugger.DebugText("% Health Display created", debugMode);
-		}
+		//// if pct health display doesn't already exist, create one
+		//if !pctHealthController {
+			//pctHealthController = new TextFieldController(m_swfRoot);
+			//Debugger.DebugText("% Health Controller created", debugMode);
+		//}
 		
 		// Set default text
         warningController.UpdateText("A Lurker Is Announced");
 		warningController.decayText(textDecayTime);
-		pctHealthController.UpdateText("100%")
+		//pctHealthController.UpdateText("100%")
 		
 		// Call a GuiEdit to update visibility and such
         GuiEdit();
     }
+	
+	//private function UpdatePctHealthDisplay(text:String)
+	//{
+		//// update health display
+		//pctHealthController.UpdateText(text);
+	//}
 	
 	private function UpdateWarning(text:String)
 	{
@@ -478,26 +511,26 @@ class com.theck.ALIA.ALIA
 		Debugger.DebugText("warningStopDrag: x: " + m_pos.x + "  y: " + m_pos.y, debugMode);
     }
 	
-    public function pctHealthStartDrag(){
-		Debugger.DebugText("pctHealthStartDrag called", debugMode);
-        pctHealthController.clip.startDrag();
-    }
-
-    public function pctHealthStopDrag(){
-		Debugger.DebugText("pctHealthStopDrag called", debugMode);
-        pctHealthController.clip.stopDrag();
-		
-		// grab position for config storage on Deactivate()
-        ph_pos = Common.getOnScreen(pctHealthController.clip); 
-		
-		Debugger.DebugText("pctHealthStopDrag: x: " + ph_pos.x + "  y: " + ph_pos.y, debugMode);
-    }
+    //public function pctHealthStartDrag(){
+		//Debugger.DebugText("pctHealthStartDrag called", debugMode);
+        //pctHealthController.clip.startDrag();
+    //}
+//
+    //public function pctHealthStopDrag(){
+		//Debugger.DebugText("pctHealthStopDrag called", debugMode);
+        //pctHealthController.clip.stopDrag();
+		//
+		//// grab position for config storage on Deactivate()
+        //ph_pos = Common.getOnScreen(pctHealthController.clip); 
+		//
+		//Debugger.DebugText("pctHealthStopDrag: x: " + ph_pos.x + "  y: " + ph_pos.y, debugMode);
+    //}
 
     public function GuiEdit(state:Boolean){
 		//Debugger.DebugText("GuiEdit called", debugMode);
 		warningController.setVisible(IsNYR());
 		warningController.enableInteraction(false);
-		pctHealthController.setVisible(IsNYR());
+		//pctHealthController.setVisible(IsNYR()); //TODO: uncomment once it's fixed
 		
 		//only editable in NYR
 		if IsNYR() 
@@ -512,12 +545,12 @@ class com.theck.ALIA.ALIA
 				warningController.enableInteraction(true);
 				warningController.stopBlink(); // probably unnecessary?
 				
-				pctHealthController.clip.onPress = Delegate.create(this, pctHealthStartDrag);
-				pctHealthController.clip.onRelease = Delegate.create(this, pctHealthStopDrag);
-				pctHealthController.UpdateText("100%");
-				pctHealthController.setVisible(true);
-				pctHealthController.toggleBackground(true);
-				pctHealthController.enableInteraction(true);
+				//pctHealthController.clip.onPress = Delegate.create(this, pctHealthStartDrag);
+				//pctHealthController.clip.onRelease = Delegate.create(this, pctHealthStopDrag);
+				//pctHealthController.UpdateText("100%");
+				//pctHealthController.setVisible(true);
+				//pctHealthController.toggleBackground(true);
+				//pctHealthController.enableInteraction(true);
 			} 
 			else {
 				Debugger.DebugText("GuiEdit: state false", debugMode);
@@ -530,11 +563,12 @@ class com.theck.ALIA.ALIA
 				warningController.enableInteraction(false);
 				warningController.stopBlink(); // probably unnecessary?
 				
-				pctHealthController.clip.stopDrag();
-				pctHealthController.clip.onPress = undefined;
-				pctHealthController.clip.onRelease = undefined;
-				pctHealthController.toggleBackground(false);
-				pctHealthController.enableInteraction(false);
+				//pctHealthController.clip.stopDrag();
+				//pctHealthController.clip.onPress = undefined;
+				//pctHealthController.clip.onRelease = undefined;
+				//pctHealthController.toggleBackground(false);
+				//pctHealthController.enableInteraction(false);
+				//pctHealthController.setVisible(debugMode); // TODO: remove once it's fixed
 			}
 		}
     }

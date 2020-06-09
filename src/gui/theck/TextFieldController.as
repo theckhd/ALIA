@@ -11,7 +11,7 @@ import mx.utils.Delegate;
 class gui.theck.TextFieldController
 {
 	// toggle debug messages
-	static var debugMode = true;
+	static var debugMode = false;
 	
     public var clip:MovieClip;
     private var field:TextField;
