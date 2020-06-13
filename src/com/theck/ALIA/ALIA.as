@@ -3,9 +3,10 @@
 * @author theck
 */
 
+import com.GameInterface.DistributedValue;
+import com.GameInterface.DistributedValueBase;
 import com.GameInterface.Game.Character;
 import com.Utils.ID32;
-//import com.GameInterface.WaypointInterface;
 import com.Utils.Archive;
 import com.Utils.LDBFormat;
 import com.Utils.GlobalSignal;
@@ -55,24 +56,24 @@ class com.theck.ALIA.ALIA
 	private var Ann_PS3_Now:Boolean;
 	private var Ann_FR_Soon:Boolean;
 	private var Ann_FR_Now:Boolean;
+	private var AnnounceSettingsBool:Boolean;
 	
 	// percentages
-	private var pct_SB1_Soon:Number;
 	private var pct_SB1_Now:Number;
-	private var pct_PS1_Soon:Number;
 	private var pct_PS1_Now:Number;
-	private var pct_PS2_Soon:Number;
 	private var pct_PS2_Now:Number;
-	private var pct_PS3_Soon:Number;
 	private var pct_PS3_Now:Number;
-	private var pct_FR_Soon:Number;
 	private var pct_FR_Now:Number;
+	private var pct_warning:DistributedValue;
 	
 	
 	////// Addon Management //////
 	
 	public function ALIA(swfRoot:MovieClip){
         m_swfRoot = swfRoot;
+		
+		// create options (note: each is a DistributedValue, need to access w/ SetValue() / GetValue() in code
+		pct_warning = DistributedValue.Create("alia_warnpct");
     }
 
 	public function Load(){
@@ -88,9 +89,15 @@ class com.theck.ALIA.ALIA
 		GlobalSignal.SignalSetGUIEditMode.Connect(GuiEdit, this);
 		
 		// Check for TargetChanged signal connection
-		CheckForSignalHookup();
+		//CheckForSignalHookup();
+		
+		// connect options to SettingsChanged function
+		pct_warning.SignalChanged.Connect(SettingsChanged, this);
+		
+		// announce settings flag
+		AnnounceSettingsBool = true;
 			
-		// debugging text strings
+/*		// debugging text strings
 		Debugger.DebugText("~~~Text String testing~~", debugMode);
 		Debugger.DebugText("shadow: " + stringShadowOutOfTime, debugMode);
 		Debugger.DebugText("ps: " + stringPersonalSpace, debugMode);
@@ -99,7 +106,7 @@ class com.theck.ALIA.ALIA
 		Debugger.DebugText("51000,32030 is " + LDBFormat.LDBGetText(51000, 32030),debugMode);
 		Debugger.DebugText("51000,32433 is " + LDBFormat.LDBGetText(51000, 32433),debugMode);
 		Debugger.DebugText("51000,32030 is " + LDBFormat.LDBGetText(51000, 32030),debugMode); 
-		Debugger.DebugText("~~~~~~~~~~~~~~~~~~~~~~~", debugMode);
+		Debugger.DebugText("~~~~~~~~~~~~~~~~~~~~~~~", debugMode);*/
 	}
 
 	public function Unload(){		
@@ -108,6 +115,7 @@ class com.theck.ALIA.ALIA
 		// disconnect all signals
 		ResetLurker();
 		DisconnectTargetChangedSignal();
+		pct_warning.SignalChanged.Disconnect(SettingsChanged, this);
 	}
 	
 	public function Activate(config:Archive){
@@ -115,44 +123,25 @@ class com.theck.ALIA.ALIA
 		
 		// Move text to desired position
 		m_pos = config.FindEntry("alia_warnPosition", new Point(600, 600));		
-		Debugger.DebugText("Activate warning Position: x= " + m_pos.x + "  y= " + m_pos.y, debugMode);
 		warningController.setPos(m_pos);
 		
 		h_pos = config.FindEntry("alia_healthPosition", new Point(600, 500));
-		Debugger.DebugText("Activate health Position: x= " + h_pos.x + "  y= " + h_pos.y, debugMode);
 		healthController.setPos(h_pos);
 		
-		/*  Eventually I'll store these in the config (once I have slash commands to edit them)
-			For now, just hardcoding everything to make it easier to tweak during testing
-		// Set "Now" thresholds - this set is the actual threshold for casts
-		pct_SB1_Now = config.FindEntry("pct_SB1_Now", 0.75);
-		pct_PS1_Now = config.FindEntry("pct_PS1_Now", 0.67);
-		pct_PS2_Now = config.FindEntry("pct_PS2_Now", 0.45);
-		pct_PS3_Now = config.FindEntry("pct_PS3_Now", 0.25);
-		pct_FR_Now  = config.FindEntry("pct_FR_Now", 0.025);
-		
-		// Set "Soon" thresholds - this is when the Soon warning occurs
-		pct_SB1_Soon = config.FindEntry("pct_SB1_Soon", pct_SB1_Now + 0.02);
-		pct_PS1_Soon = config.FindEntry("pct_PS1_Soon", pct_PS1_Now + 0.02);
-		pct_PS2_Soon = config.FindEntry("pct_PS2_Soon", pct_PS2_Now + 0.03);
-		pct_PS3_Soon = config.FindEntry("pct_PS3_Soon", pct_PS3_Now + 0.03);
-		pct_FR_Soon  = config.FindEntry("pct_FR_Soon" , pct_FR_Now  + 0.025);
-		*/
 		pct_SB1_Now = 0.75;
 		pct_PS1_Now = 0.67;
 		pct_PS2_Now = 0.45;
 		pct_PS3_Now = 0.25;
 		pct_FR_Now  = 0.025;
 		
-		// Set "Soon" thresholds - this is when the Soon warning occurs
-		pct_SB1_Soon = pct_SB1_Now + 0.03;
-		pct_PS1_Soon = pct_PS1_Now + 0.02;
-		pct_PS2_Soon = pct_PS2_Now + 0.03;
-		pct_PS3_Soon = pct_PS3_Now + 0.03;
-		pct_FR_Soon  = pct_FR_Now  + 0.025;
+		// set options
+		pct_warning.SetValue(config.FindEntry("pct_warning", 3));
 		
 		// Check for TargetChanged signal connection
 		CheckForSignalHookup();
+		
+		// Announce any relevant settings the first time Activate() is called w/in NYR
+		AnnounceSettings();
 	}
 
 	public function Deactivate():Archive{
@@ -160,23 +149,11 @@ class com.theck.ALIA.ALIA
 		
 		// save the current position in the config
 		var config = new Archive();
-		Debugger.DebugText("Deactivate warning position: x= " + m_pos.x + "  y= " + m_pos.y, debugMode);
 		config.AddEntry("alia_warnPosition", m_pos);
-		
-		Debugger.DebugText("Deactivate health position: x= " + h_pos.x + "  y= " + h_pos.y, debugMode);
 		config.AddEntry("alia_healthPosition", h_pos);
 		
-/*		//save all of the thresholds
-		config.AddEntry("pct_SB1_Now", pct_SB1_Now);
-		config.AddEntry("pct_PS1_Now", pct_PS1_Now);
-		config.AddEntry("pct_PS2_Now", pct_PS2_Now);
-		config.AddEntry("pct_PS3_Now", pct_PS3_Now);
-		config.AddEntry("pct_FR_Now" , pct_FR_Now);
-		config.AddEntry("pct_SB1_Soon", pct_SB1_Soon);
-		config.AddEntry("pct_PS1_Soon", pct_PS1_Soon);
-		config.AddEntry("pct_PS2_Soon", pct_PS2_Soon);
-		config.AddEntry("pct_PS3_Soon", pct_PS3_Soon);
-		config.AddEntry("pct_FR_Soon" , pct_FR_Soon);*/
+		// save options
+		config.AddEntry("pct_warning", pct_warning.GetValue());
 		
 		return config
 	}
@@ -190,13 +167,28 @@ class com.theck.ALIA.ALIA
 		var zone = m_player.GetPlayfieldID();
 		return (debugMode || IsNYR10() || zone == 5710); // SM, E1, and E5 are all 5710
 	}
+	
+	private function SettingsChanged(dv:DistributedValue) {
+		
+		Debugger.DebugText("SettingsChanged()", debugMode);
+        Debugger.DebugText("SettingsChanged: dv.GetName() is " + dv.GetName(), debugMode);
+        Debugger.DebugText("SettingsChanged: dv.GetValue() is " + dv.GetValue(), debugMode);
+		
+		AnnounceSettingsBool = true;
+		
+		switch (dv.GetName()) {
+		case "alia_warnpct":
+			pct_warning = dv;
+			break;
+		}
+		AnnounceSettings();
+	}
 		
 	public function CheckForSignalHookup()
 	{	
 		// if in NYR, connect to the TargetChanged signal 
 		if (IsNYR())
-		{
-			Debugger.DebugText("You have entered NYR", debugMode);	
+		{	
 			ConnectTargetChangedSignal();
 		}
 		else
@@ -225,6 +217,15 @@ class com.theck.ALIA.ALIA
 		Ann_PS3_Now = true;
 		Ann_FR_Soon = true;
 		Ann_FR_Now = true;
+	}
+	
+	public function AnnounceSettings()
+	{
+		if ( debugMode || ( AnnounceSettingsBool && IsNYR() ) ) {
+			com.GameInterface.UtilsBase.PrintChatText("ALIA: NYR Detected. Warning setting is " + pct_warning.GetValue() + '%');
+			AnnounceSettingsBool = false; // only resets on Load() or SettingsChanged()
+		}
+		
 	}
 	
 	////// Encounter Logic //////
@@ -265,7 +266,7 @@ class com.theck.ALIA.ALIA
 		}
 	}
 	
-	public function updatePercentHealthFlag() { updateHealthDisplay = true; }
+	public function setPercentHealthFlag() { updateHealthDisplay = true; }
 	
 	public function LurkerStatChanged(stat)
 	{
@@ -286,14 +287,14 @@ class com.theck.ALIA.ALIA
 				UpdateHealthText(Math.round(pct * 1000) / 10 + "%");
 				
 				updateHealthDisplay = false;
-				setTimeout(Delegate.create(this, updatePercentHealthFlag), 250 );
+				setTimeout(Delegate.create(this, setPercentHealthFlag), 250 );
 			}
 			
 			
 			//Debugger.DebugText("Health % is " + pct * 100 + "%", debugMode);
 			
 			// Shadow Incoming at 26369244 (75%)
-			if ( Ann_SB1_Soon && pct < pct_SB1_Soon ) 
+			if ( Ann_SB1_Soon && pct < ( pct_SB1_Now + pct_warning.GetValue() / 100 ) ) 
 			{
 				UpdateWarning("Shadow Soon (75%)");
 				Ann_SB1_Soon = false;
@@ -311,7 +312,7 @@ class com.theck.ALIA.ALIA
 			*/
 			
 			// First Personal Space at 23556525 (67%)
-			if ( Ann_PS1_Soon && SB1_Cast && IsNYR10() && pct < pct_PS1_Soon ) 
+			if ( Ann_PS1_Soon && SB1_Cast && IsNYR10() && pct < ( pct_PS1_Now + pct_warning.GetValue() / 100 ) ) 
 			{
 				UpdateWarning("Personal Space Soon (67%)");	
 				Ann_PS1_Soon = false;
@@ -323,7 +324,7 @@ class com.theck.ALIA.ALIA
 			}
 			
 			// Second Personal Space at 15821546 (45%)
-			else if ( Ann_PS2_Soon && IsNYR10() && pct < pct_PS2_Soon ) 
+			else if ( Ann_PS2_Soon && IsNYR10() && pct < ( pct_PS2_Now + pct_warning.GetValue() / 100 ) ) 
 			{
 				UpdateWarning("Personal Space Soon (45%)");	
 				Ann_PS2_Soon = false;
@@ -335,7 +336,7 @@ class com.theck.ALIA.ALIA
 			}
 			
 			// Third Personal Space at 8789478 (25%)
-			else if ( Ann_PS3_Soon && IsNYR10() && pct < pct_PS3_Soon ) 
+			else if ( Ann_PS3_Soon && IsNYR10() && pct < ( pct_PS3_Now + pct_warning.GetValue() / 100 ) ) 
 			{
 				UpdateWarning("Personal Space Soon (25%)");	
 				Ann_PS3_Soon = false;		
@@ -347,7 +348,7 @@ class com.theck.ALIA.ALIA
 			}
 				
 			// Final Resort at 1757950 (5%) - actually this seems to happen between 2.5% and 3%
-			if (Ann_FR_Soon && pct < pct_FR_Soon ) 
+			if (Ann_FR_Soon && pct < ( pct_FR_Now + pct_warning.GetValue() / 100 ) ) 
 			{
 				UpdateWarning("Final Resort Soon (3%)");
 				Ann_FR_Soon = false;				
