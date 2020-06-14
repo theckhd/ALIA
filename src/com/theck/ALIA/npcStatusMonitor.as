@@ -1,0 +1,59 @@
+/**
+ * ...
+ * @author theck
+ */
+import com.GameInterface.Game.Character;
+import com.theck.Utils.Debugger;
+
+class com.theck.ALIA.npcStatusMonitor
+{
+	static var debugMode = false;
+	
+	public var char:Character;
+	public var state:Number;
+	
+	static var gaiaRose:Number = 7945521;
+	static var gaiaAlex:Number = 7945522;
+	static var gaiaMei:Number = 7945523;
+	static var podded:Number = 7854429;
+	static var podIncoming:Number = 8907521;
+	static var knockedDown:Number = 7863490;
+	//public var BuffFound:Signal;
+	
+	public function npcStatusMonitor(_char:Character) 
+	{
+		char = _char;
+		state = 0;
+        //BuffFound = new Signal();
+        char.SignalBuffAdded.Connect(UpdateStatus, this);
+		char.SignalInvisibleBuffAdded.Connect(UpdateStatus, this);
+		char.SignalBuffRemoved.Connect(UpdateStatus, this);
+		char.SignalInvisibleBuffUpdated.Connect(UpdateStatus, this);
+		
+		// on creation, check current buffs to find status in case of /reloadui
+		UpdateStatus();
+    }
+        
+	private function UpdateStatus() {
+		if char.m_BuffList[podded] {
+			state = 4;
+		}
+		else if char.m_BuffList[podIncoming] {
+			state = 3;
+		}
+		else if char.m_BuffList[knockedDown] {
+			state = 2;
+		}
+		else if ( char.m_BuffList[gaiaRose] || char.m_BuffList[gaiaAlex] || char.m_BuffList[gaiaMei] ) {
+			state = 1;
+		}
+		else { 
+			state = 0;
+		}
+		Debugger.DebugText("NSM.UpdateStatus(): " + char.GetName() + " is in state " + state, debugMode);
+	}
+	
+	public function GetStatus():Number {
+		return state;
+	}
+}

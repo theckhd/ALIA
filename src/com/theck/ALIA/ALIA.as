@@ -3,15 +3,21 @@
 * @author theck
 */
 
+import com.GameInterface.CharacterCreation.CharacterCreation;
 import com.GameInterface.DistributedValue;
 import com.GameInterface.DistributedValueBase;
 import com.GameInterface.Game.Character;
+import com.GameInterface.Game.Dynel;
+import com.GameInterface.VicinitySystem;
+import com.GameInterface.ProjectUtilsBase;
+import com.Utils.WeakList;
 import com.Utils.ID32;
 import com.Utils.Archive;
 import com.Utils.LDBFormat;
 import com.Utils.GlobalSignal;
 import com.theck.Utils.Common;
 import com.theck.Utils.Debugger;
+import com.theck.ALIA.npcStatusMonitor;
 import gui.theck.TextFieldController;
 import mx.utils.Delegate;
 import flash.geom.Point;
@@ -23,16 +29,24 @@ class com.theck.ALIA.ALIA
 	static var debugMode:Boolean = false;
 	
 	// basic settings and text strings
-	static var lurkerNameLocalized:String = LDBFormat.LDBGetText(51000, 32030);
+	static var stringLurker:String = LDBFormat.LDBGetText(51000, 32030);
 	static var stringShadowOutOfTime:String = LDBFormat.LDBGetText(50210, 8934410); //"Shadow Out Of Time";
 	static var stringPersonalSpace:String = LDBFormat.LDBGetText(50210, 8934415); //"Personal Space";
 	static var stringFinalResort:String = LDBFormat.LDBGetText(50210, 7963851); //"Final Resort";
+	static var alex112:Number = 32302;
+	static var mei112:Number = 32301;
+	static var rose112:Number = 32299;
+	static var zuberi112:Number = 32303;
 	static var textDecayTime:Number = 10;
 	static var nowColor:Number = 0xFF0000;
 	
 	// character variables
 	public var m_player:Character;
 	private var lurker:Character;
+	private var alex:npcStatusMonitor;
+	private var rose:npcStatusMonitor;
+	private var mei:npcStatusMonitor;
+	private var zuberi:npcStatusMonitor;
 	
 	// GUI stuff
 	private var m_swfRoot:MovieClip;
@@ -69,16 +83,16 @@ class com.theck.ALIA.ALIA
 	
 	////// Addon Management //////
 	
-	public function ALIA(swfRoot:MovieClip){
+	public function ALIA(swfRoot:MovieClip) {
         m_swfRoot = swfRoot;
 		
 		// create options (note: each is a DistributedValue, need to access w/ SetValue() / GetValue() in code
 		pct_warning = DistributedValue.Create("alia_warnpct");
     }
 
-	public function Load(){
+	public function Load() {
 		com.GameInterface.UtilsBase.PrintChatText("A Lurker Is Loaded");
-		Debugger.DebugText("Debug mode enabled", debugMode);
+		DebugText("Debug mode enabled");
 		
 		// grab character
 		m_player = Character.GetClientCharacter();	
@@ -98,19 +112,19 @@ class com.theck.ALIA.ALIA
 		AnnounceSettingsBool = true;
 			
 /*		// debugging text strings
-		Debugger.DebugText("~~~Text String testing~~", debugMode);
-		Debugger.DebugText("shadow: " + stringShadowOutOfTime, debugMode);
-		Debugger.DebugText("ps: " + stringPersonalSpace, debugMode);
-		Debugger.DebugText("fr: " + stringFinalResort, debugMode);
+		DebugText("~~~Text String testing~~");
+		DebugText("shadow: " + stringShadowOutOfTime);
+		DebugText("ps: " + stringPersonalSpace);
+		DebugText("fr: " + stringFinalResort);
 		// these all give "The Unutterable Lurker"
-		Debugger.DebugText("51000,32030 is " + LDBFormat.LDBGetText(51000, 32030),debugMode);
-		Debugger.DebugText("51000,32433 is " + LDBFormat.LDBGetText(51000, 32433),debugMode);
-		Debugger.DebugText("51000,32030 is " + LDBFormat.LDBGetText(51000, 32030),debugMode); 
-		Debugger.DebugText("~~~~~~~~~~~~~~~~~~~~~~~", debugMode);*/
+		DebugText("51000,32030 is " + LDBFormat.LDBGetText(51000, 32030),debugMode);
+		DebugText("51000,32433 is " + LDBFormat.LDBGetText(51000, 32433),debugMode);
+		DebugText("51000,32030 is " + LDBFormat.LDBGetText(51000, 32030),debugMode); 
+		DebugText("~~~~~~~~~~~~~~~~~~~~~~~");*/
 	}
 
-	public function Unload(){		
-		Debugger.DebugText("Unload()");
+	public function Unload() {		
+		DebugText("Unload()");
 		
 		// disconnect all signals
 		ResetLurker();
@@ -118,8 +132,8 @@ class com.theck.ALIA.ALIA
 		pct_warning.SignalChanged.Disconnect(SettingsChanged, this);
 	}
 	
-	public function Activate(config:Archive){
-		Debugger.DebugText("Activate()", debugMode);
+	public function Activate(config:Archive) {
+		DebugText("Activate()");
 		
 		// Move text to desired position
 		m_pos = config.FindEntry("alia_warnPosition", new Point(600, 600));		
@@ -139,13 +153,14 @@ class com.theck.ALIA.ALIA
 		
 		// Check for TargetChanged signal connection
 		CheckForSignalHookup();
+		kickstart(); // grab NPCs that already exist
 		
 		// Announce any relevant settings the first time Activate() is called w/in NYR
 		AnnounceSettings();
 	}
 
-	public function Deactivate():Archive{
-		Debugger.DebugText("Deactivate()", debugMode);
+	public function Deactivate():Archive {
+		DebugText("Deactivate()");
 		
 		// save the current position in the config
 		var config = new Archive();
@@ -158,21 +173,21 @@ class com.theck.ALIA.ALIA
 		return config
 	}
 	
-	private function IsNYR10(){
+	private function IsNYR10() {
 		var zone = m_player.GetPlayfieldID();
 		return (debugMode || zone == 5715); // E10 is 5715
 	}
 	
-	private function IsNYR(){
+	private function IsNYR() {
 		var zone = m_player.GetPlayfieldID();
 		return (debugMode || IsNYR10() || zone == 5710); // SM, E1, and E5 are all 5710
 	}
 	
 	private function SettingsChanged(dv:DistributedValue) {
 		
-		Debugger.DebugText("SettingsChanged()", debugMode);
-        Debugger.DebugText("SettingsChanged: dv.GetName() is " + dv.GetName(), debugMode);
-        Debugger.DebugText("SettingsChanged: dv.GetValue() is " + dv.GetValue(), debugMode);
+		DebugText("SettingsChanged()");
+        DebugText("SettingsChanged: dv.GetName() is " + dv.GetName());
+        DebugText("SettingsChanged: dv.GetValue() is " + dv.GetValue());
 		
 		AnnounceSettingsBool = true;
 		
@@ -184,18 +199,19 @@ class com.theck.ALIA.ALIA
 		AnnounceSettings();
 	}
 		
-	public function CheckForSignalHookup()
-	{	
+	public function CheckForSignalHookup() {	
 		// if in NYR, connect to the TargetChanged signal 
 		if (IsNYR())
 		{	
 			ConnectTargetChangedSignal();
+			ConnectVicinitySignals();
 		}
 		else
 		{		
 			// disconnect all signals
 			ResetLurker();
 			DisconnectTargetChangedSignal();
+			DisconnectVicinitySignals();
 		}
 		
 		// update visibility  & blink state of text fields
@@ -204,8 +220,7 @@ class com.theck.ALIA.ALIA
 		healthController.setVisible( IsNYR() ); 
 	}
 	
-	public function ResetAnnounceFlags()
-	{
+	public function ResetAnnounceFlags() {
 		Ann_SB1_Soon = true;
 		Ann_SB1_Now = true;
 		SB1_Cast = false;
@@ -219,8 +234,7 @@ class com.theck.ALIA.ALIA
 		Ann_FR_Now = true;
 	}
 	
-	public function AnnounceSettings()
-	{
+	public function AnnounceSettings() {
 		if ( debugMode || ( AnnounceSettingsBool && IsNYR() ) ) {
 			com.GameInterface.UtilsBase.PrintChatText("ALIA: NYR Detected. Warning setting is " + pct_warning.GetValue() + '%');
 			AnnounceSettingsBool = false; // only resets on Load() or SettingsChanged()
@@ -230,19 +244,18 @@ class com.theck.ALIA.ALIA
 	
 	////// Encounter Logic //////
 	
-	public function TargetChanged(id:ID32)
-	{	
-		//Debugger.DebugText("TargetChanged id passed is " + id,debugMode);
+	public function TargetChanged(id:ID32) {	
+		//DebugText("TargetChanged id passed is " + id,debugMode);
 				
 		// If we haven't yet locked on to lurker and this id is useful
 		if (!lurkerLocked && !id.IsNull()) {
 			
 			// update current target variable
 			var currentTarget = Character.GetCharacter(id);
-			Debugger.DebugText("currentTarget GetName is " + currentTarget.GetName(), debugMode); //dump name for testing
+			DebugText("currentTarget GetName is " + currentTarget.GetName()); //dump name for testing
 			
 			// if the current target's name is "The Unutterable Lurker" (32030, 32433, 32030 should all work here)
-			if (currentTarget.GetName() == lurkerNameLocalized ) {
+			if (currentTarget.GetName() == stringLurker ) {
 				
 				// set flags for announcements to true
 				ResetAnnounceFlags();
@@ -261,16 +274,101 @@ class com.theck.ALIA.ALIA
 				// Lock on lurker so that we don't continue to check targets anymore
 				lurkerLocked = true;
 				updateHealthDisplay = true;
-				Debugger.DebugText("Lurker Locked!!", debugMode)
+				DebugText("Lurker Locked!!")
+				// TODO: should we just call DisconnectTargetChangedSignal() here and remove hte lurkerLocked flag?
 			}
 		}
 	}
 	
 	public function setPercentHealthFlag() { updateHealthDisplay = true; }
 	
-	public function LurkerStatChanged(stat)
-	{
-		//Debugger.DebugText("Lurker's Stats Changed",debugMode);
+	public function HookUpNPCs(dynelId:ID32):Void {
+		DebugText("HookUpNPCs()");
+		
+		// Notes: 
+		// dynelID and dynel.GetID() match, and give type:spawnid (e.g. 50000:12345). spawnid seems to be generated anew each time something is spawned
+		// GetType() and m_Type are 50000 for all characters (players, hostile and friendly npcs, etc)
+		// GetNameTagCategory() seems to return 5 for NPCs (hostile or friendly), but 6 for lurker (probably "boss")
+		// GetName() gives the name
+		// GetStat(112) gives the unique character ID, which is what we want to grab I guess
+		// Useful 112s:  Alex is 14242, Mei Ling is 14258, Rose is 14259, Zuberi is 14279, Eldritch Guardian (bird) is 37266
+		// 112s pulled from E1 intro: Alex is 32302, Mei Ling is 32301, Rose is 32299, Zuberi 32303
+		// 112s for lurker:
+		//	SM: 37265 (first spawn), 37263 (after wipe)
+		//	E1: 32433 (first spawn), 32030 (after wipe)
+		//	E5: 37256 (first pull), 37255 (after wipe)
+		// 	E10: 35448 (First pull), 35449 (after wipe)
+		
+		var dynel:Dynel = Dynel.GetDynel(dynelId);
+		
+		// bail if this isn't a character
+		if dynelId.GetType() != 50000 {return; }
+		
+		// minimize spam while testing
+		//if ( dynel.GetName() == "Abominated Civilian" ) {return; }
+		
+		//DebugText("Dynel GetName(): " + dynel.GetName());
+		//DebugText("Dynel Id: " + dynelId);
+		//DebugText("Dynel GetID(): " + dynel.GetID());
+		//DebugText("Dynel Interaction type: " + ProjectUtilsBase.GetInteractionType(dynelId));
+		//DebugText("Dynel m_Type: " + dynelId.m_Type);
+		//DebugText("Dynel GetType(): " + dynelId.GetType());
+		//DebugText("Dynel NameTagCategory: " + dynel.GetNametagCategory());
+		//DebugText("Dynel Stat 112: " + dynel.GetStat(112));
+		
+		//DebugText("HookUpNPCs(): !alex is " + !alex );
+		if ( !alex && ( dynel.GetStat(112) == alex112 ) ) {
+			alex = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
+			DebugText("HookUpNPCs(): Alex hooked")
+		}
+		else if ( !rose && ( dynel.GetStat(112) == rose112 ) ) {			
+			rose = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
+			DebugText("HookUpNPCs(): Rose hooked")
+		}
+		else if ( !mei && ( dynel.GetStat(112) == mei112 ) ) {
+			mei = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
+			DebugText("HookUpNPCs(): Mei hooked")		
+		}
+		else if ( !zuberi && ( dynel.GetStat(112) == zuberi112 ) ) {
+			zuberi = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
+			DebugText("HookUpNPCs(): Zuberi hooked")		
+		}
+		
+		if ( dynel.GetName() == stringLurker ) {
+			DebugText("HookUpNPCs(): Lurker could be locked here")
+			//lurker = Character.GetCharacter(dynel.GetID());
+			//lurkerLocked = true;
+		}
+		
+		// unhook this function if we have all the NPCs
+		if ( alex && rose && mei && zuberi ) { DisconnectVicinitySignals(); }
+		
+		
+	}
+	
+	public function CheckBuff(buffID:Number) {
+		// Notes: Potentially useful buffIDs:
+		// 7863490: "Knocked Down",
+		// 7945521: "Gaia Incarnate - Rose",
+		// 7945522: "Gaia Incarnate - Alex",
+		// 7945523: "Gaia Incarnate - Mei Ling",
+		// 7854429: "From Beneath You, It Devours",
+		// 8907521": "Inevitable Doom",
+		DebugText("CheckBuff(): buffID is " + buffID);
+	}
+	
+	// from LairTracker - find dynels that were already loaded before connecting signals
+	private function kickstart() {
+		DebugText("kickstart()");
+		var ls:WeakList = Dynel.s_DynelList
+		for (var num = 0; num < ls.GetLength(); num++) {
+			var dyn:Character = ls.GetObject(num);
+			HookUpNPCs(dyn.GetID());
+		}
+	}
+	
+	public function LurkerStatChanged(stat)	{
+		//DebugText("Lurker's Stats Changed",debugMode);
 		
 		if (stat == 27) {
 		
@@ -291,7 +389,7 @@ class com.theck.ALIA.ALIA
 			}
 			
 			
-			//Debugger.DebugText("Health % is " + pct * 100 + "%", debugMode);
+			//DebugText("Health % is " + pct * 100 + "%");
 			
 			// Shadow Incoming at 26369244 (75%)
 			if ( Ann_SB1_Soon && pct < ( pct_SB1_Now + pct_warning.GetValue() / 100 ) ) 
@@ -361,18 +459,19 @@ class com.theck.ALIA.ALIA
 		}
 	}
 	
-	public function LurkerCasting(spell)
-	{
-		Debugger.DebugText("Lurker is casting " + spell, debugMode);
+	public function LurkerCasting(spell) {
+		DebugText("Lurker is casting " + spell);
 		
 		// only decay on the first shadow
-		//Debugger.DebugText("SB1_Cast is " + SB1_Cast, debugMode);
-		//Debugger.DebugText("string SoT is " + stringShadowOutOfTime, debugMode);
-		//Debugger.DebugText("test is " + ( spell == stringShadowOutOfTime ), debugMode);
+		//DebugText("SB1_Cast is " + SB1_Cast);
+		//DebugText("string SoT is " + stringShadowOutOfTime);
+		//DebugText("test is " + ( spell == stringShadowOutOfTime ));
 		if ( !SB1_Cast && ( spell == stringShadowOutOfTime ) )
 		{	
+			// delay changing the flag by 15 seconds so that we don't get personal space warnings during phase 2
+			setTimeout(Delegate.create(this, function(){this.SB1_Cast = true; }), 15000 );
 			SB1_Cast = true;
-			Debugger.DebugText("SB1_Cast is " + SB1_Cast, debugMode);
+			DebugText("SB1_Cast is " + SB1_Cast);
 			warningController.decayText(3);
 		}
 		// decay on every PS
@@ -391,16 +490,14 @@ class com.theck.ALIA.ALIA
 	
 	////// Signal Connections //////
 	
-	public function LurkerDied()
-	{
+	public function LurkerDied() {
 		healthController.UpdateText("Dead");
 		healthController.decayText(10);
 		ResetLurker();
 	}
 	
-	public function ResetLurker()
-	{
-		Debugger.DebugText("Lurker signals disconnected, lurker unlocked", debugMode)
+	public function ResetLurker() {
+		DebugText("Lurker signals disconnected, lurker unlocked")
 		
 		// Disconnect all of the lurker-specific signals
 		lurker.SignalStatChanged.Disconnect(LurkerStatChanged, this);
@@ -415,40 +512,54 @@ class com.theck.ALIA.ALIA
 		warningController.stopBlink();
 	}
 	
-	public function ConnectTargetChangedSignal()
-	{
-		Debugger.DebugText("TargetChanged connected", debugMode)
+	public function ConnectTargetChangedSignal() {
+		DebugText("TargetChanged connected")
 		
 		// connects to targetchanged signal to search for lurker
 		m_player.SignalOffensiveTargetChanged.Connect(TargetChanged, this);
 		
 	}
 		
-	public function DisconnectTargetChangedSignal()
-	{
-		Debugger.DebugText("TargetChanged disconnected", debugMode)
+	public function DisconnectTargetChangedSignal()	{
+		DebugText("TargetChanged disconnected")
 		
 		// disconnect targetchanged signal (usually called only when leaving NYR)
 		m_player.SignalOffensiveTargetChanged.Disconnect(TargetChanged, this);
 	}
 	
+	public function ConnectVicinitySignals() {
+		DebugText("ConnectVicinitySignal()");
+		
+		VicinitySystem.SignalDynelEnterVicinity.Connect(HookUpNPCs, this);
+		m_player.SignalOffensiveTargetChanged.Connect(HookUpNPCs, this);
+		m_player.SignalDefensiveTargetChanged.Connect(HookUpNPCs, this);
+		
+	}
+	
+	public function DisconnectVicinitySignals()	{
+		DebugText("DisconnectVicinitySignal()");
+		
+		VicinitySystem.SignalDynelEnterVicinity.Disconnect(HookUpNPCs, this);
+		m_player.SignalOffensiveTargetChanged.Disconnect(HookUpNPCs, this);
+		m_player.SignalDefensiveTargetChanged.Disconnect(HookUpNPCs, this);
+		
+	}
 	
 	////// GUI stuff //////
 	
-	public function CreateTextFields()
-	{
-		Debugger.DebugText("CreateTextFields()", debugMode);
+	public function CreateTextFields() {
+		DebugText("CreateTextFields()");
 		
 		// if a text field doesn't already exist, create one
 		if !warningController {
 			warningController = new TextFieldController(m_swfRoot, "warningText");
-			Debugger.DebugText("Warning Controller created", debugMode);
+			DebugText("Warning Controller created");
 		}
 		
 		// if pct health display doesn't already exist, create one
 		if !healthController {
 			healthController = new TextFieldController(m_swfRoot, "healthText");
-			Debugger.DebugText("% Health Controller created", debugMode);
+			DebugText("% Health Controller created");
 		}
 		
 		// Set default text
@@ -460,30 +571,26 @@ class com.theck.ALIA.ALIA
         GuiEdit();
     }
 	
-	private function UpdateHealthText(text:String)
-	{
+	private function UpdateHealthText(text:String) {
 		// update health display
 		healthController.UpdateText(text);
 	}
 	
-	private function UpdateWarning(text:String)
-	{
+	private function UpdateWarning(text:String)	{
 		// print text to chat, stop any existing blink effects, and update the text field
 		com.GameInterface.UtilsBase.PrintChatText(text);
 		warningController.stopBlink();
 		warningController.UpdateText(text);
 	}
 	
-	private function UpdateWarningWithDecay(text:String)
-	{
+	private function UpdateWarningWithDecay(text:String) {
 		// print text to chat, update the text field, schedule decay
 		com.GameInterface.UtilsBase.PrintChatText(text);
 		warningController.UpdateText(text);		
 		warningController.decayText(textDecayTime);
 	}
 	
-	private function UpdateWarningWithBlink(text:String)
-	{
+	private function UpdateWarningWithBlink(text:String) {
 		// print text to chat, set color to red, update the text field, start blinking
 		com.GameInterface.UtilsBase.PrintChatText(text);
 		warningController.setTextColor( nowColor );
@@ -491,38 +598,38 @@ class com.theck.ALIA.ALIA
 		warningController.blinkText();
 	}
     
-    public function warningStartDrag(){
-		Debugger.DebugText("warningStartDrag called", debugMode);
+    public function warningStartDrag() {
+		DebugText("warningStartDrag called");
         warningController.clip.startDrag();
     }
 
-    public function warningStopDrag(){
-		Debugger.DebugText("warningStopDrag called", debugMode);
+    public function warningStopDrag() {
+		DebugText("warningStopDrag called");
         warningController.clip.stopDrag();
 		
 		// grab position for config storage on Deactivate()
         m_pos = Common.getOnScreen(warningController.clip); 
 		
-		Debugger.DebugText("warningStopDrag: x: " + m_pos.x + "  y: " + m_pos.y, debugMode);
+		DebugText("warningStopDrag: x: " + m_pos.x + "  y: " + m_pos.y);
     }
 	
-    public function pctHealthStartDrag(){
-		Debugger.DebugText("pctHealthStartDrag called", debugMode);
+    public function pctHealthStartDrag() {
+		DebugText("pctHealthStartDrag called");
         healthController.clip.startDrag();
     }
 
-    public function pctHealthStopDrag(){
-		Debugger.DebugText("pctHealthStopDrag called", debugMode);
+    public function pctHealthStopDrag() {
+		DebugText("pctHealthStopDrag called");
         healthController.clip.stopDrag();
 		
 		// grab position for config storage on Deactivate()
         h_pos = Common.getOnScreen(healthController.clip); 
 		
-		Debugger.DebugText("pctHealthStopDrag: x: " + h_pos.x + "  y: " + h_pos.y, debugMode);
+		DebugText("pctHealthStopDrag: x: " + h_pos.x + "  y: " + h_pos.y);
     }
 
-    public function GuiEdit(state:Boolean){
-		//Debugger.DebugText("GuiEdit called", debugMode);
+    public function GuiEdit(state:Boolean) {
+		//DebugText("GuiEdit called");
 		warningController.setVisible(IsNYR());
 		warningController.enableInteraction(false);
 		healthController.setVisible(IsNYR()); 
@@ -531,7 +638,7 @@ class com.theck.ALIA.ALIA
 		if IsNYR() 
 		{
 			if (state) {
-				Debugger.DebugText("GuiEdit: state true", debugMode);
+				DebugText("GuiEdit: state true");
 				warningController.clip.onPress = Delegate.create(this, warningStartDrag);
 				warningController.clip.onRelease = Delegate.create(this, warningStopDrag);
 				warningController.UpdateText("~~~~~ Move Me!! ~~~~~");
@@ -548,7 +655,7 @@ class com.theck.ALIA.ALIA
 				healthController.enableInteraction(true);
 			} 
 			else {
-				Debugger.DebugText("GuiEdit: state false", debugMode);
+				DebugText("GuiEdit: state false");
 				warningController.clip.stopDrag();
 				warningController.clip.onPress = undefined;
 				warningController.clip.onRelease = undefined;
@@ -566,5 +673,10 @@ class com.theck.ALIA.ALIA
 			}
 		}
     }
+	
+	// Debugging
+	static function DebugText(text) {
+		if (debugMode) Debugger.PrintText(text);
+	}
 	
 }
