@@ -224,6 +224,7 @@ class com.theck.ALIA.ALIA
 		warningController.setVisible( IsNYR() );
 		warningController.stopBlink();		
 		healthController.setVisible( IsNYR() ); 
+		npcDisplay.setVisible( IsNYR() ); 
 	}
 	
 	public function ResetAnnounceFlags() {
@@ -305,13 +306,10 @@ class com.theck.ALIA.ALIA
 		//	E5: 37256 (first pull), 37255 (after wipe)
 		// 	E10: 35448 (First pull), 35449 (after wipe)
 		
-		var dynel:Dynel = Dynel.GetDynel(dynelId);
-		
 		// bail if this isn't a character
 		if dynelId.GetType() != 50000 {return; }
 		
-		// minimize spam while testing
-		//if ( dynel.GetName() == "Abominated Civilian" ) {return; }
+		var dynel:Dynel = Dynel.GetDynel(dynelId);
 		
 		//DebugText("Dynel GetName(): " + dynel.GetName());
 		//DebugText("Dynel Id: " + dynelId);
@@ -399,9 +397,6 @@ class com.theck.ALIA.ALIA
 				updateHealthDisplay = false;
 				setTimeout(Delegate.create(this, setPercentHealthFlag), 250 );
 			}
-			
-			
-			//DebugText("Health % is " + pct * 100 + "%");
 			
 			// Shadow Incoming at 26369244 (75%)
 			if ( Ann_SB1_Soon && pct < ( pct_SB1_Now + pct_warning.GetValue() / 100 ) ) 

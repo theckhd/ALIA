@@ -17,9 +17,13 @@ class com.theck.ALIA.npcStatusMonitor
 	static var gaiaRose:Number = 7945521;
 	static var gaiaAlex:Number = 7945522;
 	static var gaiaMei:Number = 7945523;
-	static var podded:Number = 7854429;
+	static var podded:Number = 7854429; // also 7970812 (SM - E10) and 8934432 (E10), but this one seems to work
 	static var podIncoming:Number = 8907521;
 	static var knockedDown:Number = 7863490;
+	static var incapped:Number = 8907542;
+	// other interesting casts:
+	// 9124231 - Digestive Slime
+	
 	public var StatusChanged:Signal;
 	
 	public function npcStatusMonitor(_char:Character) 
@@ -34,6 +38,7 @@ class com.theck.ALIA.npcStatusMonitor
 		
 		if debugMode {
 			char.SignalBuffAdded.Connect(DebugAnnounceBuffs, this);
+			char.SignalInvisibleBuffAdded.Connect(DebugAnnounceBuffs, this);
 		}
 		
 		// on creation, check current buffs to find status in case of /reloadui
@@ -49,7 +54,7 @@ class com.theck.ALIA.npcStatusMonitor
 			state = 3;
 			StatusChanged.Emit();
 		}
-		else if char.m_BuffList[knockedDown] {
+		else if ( char.m_BuffList[incapped] || char.m_BuffList[knockedDown] ) {
 			state = 2;
 			StatusChanged.Emit();
 		}
@@ -69,7 +74,7 @@ class com.theck.ALIA.npcStatusMonitor
 	}
 	
 	private function DebugAnnounceBuffs(buffId:Number) {
-		Debugger.DebugText("NSM: " + char.GetName() + " has gained buff " + LDBFormat.LDBGetText(50210, buffId) + " (" + buffId + ")");
+		Debugger.DebugText("NSM: " + char.GetName() + " has gained buff " + LDBFormat.LDBGetText(50210, buffId) + " (" + buffId + ")", debugMode);
 	}
 	
 }

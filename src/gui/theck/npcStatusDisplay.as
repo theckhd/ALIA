@@ -12,14 +12,14 @@ class gui.theck.npcStatusDisplay
 {
 	// toggle debug messages
 	static var debugMode = false;
-	// status colors: White (running), Green (buffing), Gray? (knocked down), Yellow (pod inc), Red (podded)
-	static var statusColors:Array = new Array(0xFFFFFF, 0x008000, 0xC0C0C0, 0xFFC300 , 0xFF0000);
+	// status colors: White (running), Green (buffing), Gray (knocked down), Yellow (pod inc), Red (podded)
+	static var statusColors:Array = new Array(0xFFFFFF, 0x008000, 0xA4A4A4, 0xFFC300 , 0xFF0000);
 		
     public var clip:MovieClip;
-    private var alexText:TextField;
-    private var roseText:TextField;
-    private var meiText:TextField;
-    private var zuberiText:TextField;
+    private var alexLetter:TextField;
+    private var roseLetter:TextField;
+    private var meiLetter:TextField;
+    private var zuberiLetter:TextField;
 	
 	static var textSize:Number = 30;
 	static var boxSize:Number = textSize*1.35;
@@ -30,15 +30,15 @@ class gui.theck.npcStatusDisplay
         clip._x = Stage.width /  2;
         clip._y = Stage.height / 2;
 		
-		meiText = clip.createTextField("mei", clip.getNextHighestDepth(), 0, 0, boxSize, boxSize);
-		roseText = clip.createTextField("rose", clip.getNextHighestDepth(), 0, boxSize, boxSize, boxSize);
-        alexText = clip.createTextField("alex", clip.getNextHighestDepth(), 0, 2*boxSize, boxSize, boxSize);
-		zuberiText = clip.createTextField("zuberi", clip.getNextHighestDepth(), 0, 3*boxSize, boxSize, boxSize);
+		meiLetter = clip.createTextField("mei", clip.getNextHighestDepth(), 0, 0, boxSize, boxSize);
+		roseLetter = clip.createTextField("rose", clip.getNextHighestDepth(), 0, boxSize, boxSize, boxSize);
+        alexLetter = clip.createTextField("alex", clip.getNextHighestDepth(), 0, 2*boxSize, boxSize, boxSize);
+		zuberiLetter = clip.createTextField("zuberi", clip.getNextHighestDepth(), 0, 3*boxSize, boxSize, boxSize);
 		
-		InitializeTextField(meiText);
-		InitializeTextField(roseText);
-		InitializeTextField(alexText);
-		InitializeTextField(zuberiText);
+		InitializeTextField(meiLetter);
+		InitializeTextField(roseLetter);
+		InitializeTextField(alexLetter);
+		InitializeTextField(zuberiLetter);
 	}
 	
 	
@@ -97,10 +97,10 @@ class gui.theck.npcStatusDisplay
 		Tweener.removeTweens(clip);
 		
 		// update each text field with the appropriate status
-		UpdateField(meiText, meiStatus);
-		UpdateField(roseText, roseStatus);
-		UpdateField(alexText, alexStatus);
-		UpdateField(zuberiText, zuberiStatus);		
+		UpdateField(meiLetter, meiStatus);
+		UpdateField(roseLetter, roseStatus);
+		UpdateField(alexLetter, alexStatus);
+		UpdateField(zuberiLetter, zuberiStatus);		
     }
 	
 	private function UpdateField(field:TextField, status:Number) {
@@ -127,27 +127,27 @@ class gui.theck.npcStatusDisplay
 	}
 	
 	public function toggleBackground(flag:Boolean) {
-		alexText.background = flag;
-		roseText.background = flag;
-		meiText.background = flag;
-		zuberiText.background = flag;		
+		alexLetter.background = flag;
+		roseLetter.background = flag;
+		meiLetter.background = flag;
+		zuberiLetter.background = flag;		
 	}
 	
-	public function setTextColor(color:Number) {
-		clip.textColor = color;
-	}
+	//public function setTextColor(color:Number) {
+		//clip.textColor = color;
+	//}
+	
 	public function enableInteraction(state:Boolean) {
 		clip.hitTestDisable = !state;
-		alexText.hitTestDisable = !state;
-		meiText.hitTestDisable = !state;
-		roseText.hitTestDisable = !state;
-		zuberiText.hitTestDisable = !state;
+		alexLetter.hitTestDisable = !state;
+		meiLetter.hitTestDisable = !state;
+		roseLetter.hitTestDisable = !state;
+		zuberiLetter.hitTestDisable = !state;
 	}
 	
 	public function decayDisplay(decayTime) {
 		Debugger.DebugText("decayText called", debugMode);
 		Tweener.addTween(clip, {_alpha : 0, delay : 2, time : decayTime});	
-        //setTimeout(Delegate.create(this, stopBlink), decayTime*1000 + 500);
 	}
 	
     //private function blinkField(field:TextField) {
@@ -170,6 +170,7 @@ class gui.theck.npcStatusDisplay
             //field.transform.colorTransform = colorTransform;
         //}), 50);
     //}
+	
     //public function stopBlinkField(field:TextField) {
 		//Debugger.DebugText("stopBlink called", debugMode);
         //clearInterval(field.blinkInterval);
