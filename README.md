@@ -4,7 +4,7 @@ This Secret World Legends addon provides announcements for important events in t
 Currently there are three text fields that appear. The displays only appear when in the Manhattan Exclusion Zone, the addon basically goes to sleep outside of that zone.
 
 
-![Screenshot of addon during encounter](alia_health_warning.png)
+![Screenshot of addon during encounter](alia_health_warning.png) ![Screenshot of addon during encounter](alia_npcdisplay.png)
 
 - A health display 
   - This shows the Lurker's current health percentage
@@ -18,11 +18,10 @@ Currently there are three text fields that appear. The displays only appear when
   - Also displays a "coming soon" warning before the cast threshold (3% ahead by default, user-configurable)
   - These warnings fade out quickly when the spell is cast
  
- The warn-ahead percentage can be set with the following command (this will set it to 5% ahead):
+  - The warn-ahead percentage can be set with the following command (this will set it to 5% ahead):
 
-`/setoption alia_warnpct 5`   
+    - `/setoption alia_warnpct 5`   
     
-![Screenshot of addon during encounter](alia_npcdisplay.png)
 
 - An NPC display
   - Displays the status of each NPC as a color-coded letter
