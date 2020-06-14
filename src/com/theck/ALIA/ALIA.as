@@ -19,6 +19,7 @@ import com.theck.Utils.Common;
 import com.theck.Utils.Debugger;
 import com.theck.ALIA.npcStatusMonitor;
 import gui.theck.TextFieldController;
+import gui.theck.npcStatusDisplay;
 import mx.utils.Delegate;
 import flash.geom.Point;
 
@@ -51,11 +52,13 @@ class com.theck.ALIA.ALIA
 	// GUI stuff
 	private var m_swfRoot:MovieClip;
     private var AnnounceText:TextField;
-	private var m_pos:flash.geom.Point;
+	private var w_pos:flash.geom.Point;
 	private var h_pos:flash.geom.Point;
+	private var n_pos:flash.geom.Point;
 	private var warningController:TextFieldController;
 	private var healthController:TextFieldController;
 	private var updateHealthDisplay:Boolean;
+	private var npcDisplay:npcStatusDisplay;
 	
 	// logic flags
 	private var lurkerLocked:Boolean;
@@ -99,11 +102,8 @@ class com.theck.ALIA.ALIA
 		lurkerLocked = false;		
 		
 		//create text field, connect to GuiEdit
-		CreateTextFields();
+		CreateGuiElements();
 		GlobalSignal.SignalSetGUIEditMode.Connect(GuiEdit, this);
-		
-		// Check for TargetChanged signal connection
-		//CheckForSignalHookup();
 		
 		// connect options to SettingsChanged function
 		pct_warning.SignalChanged.Connect(SettingsChanged, this);
@@ -136,11 +136,14 @@ class com.theck.ALIA.ALIA
 		DebugText("Activate()");
 		
 		// Move text to desired position
-		m_pos = config.FindEntry("alia_warnPosition", new Point(600, 600));		
-		warningController.setPos(m_pos);
+		w_pos = config.FindEntry("alia_warnPosition", new Point(600, 600));		
+		warningController.setPos(w_pos);
 		
 		h_pos = config.FindEntry("alia_healthPosition", new Point(600, 500));
 		healthController.setPos(h_pos);
+		
+		n_pos = config.FindEntry("alia_npcPosition", new Point(600, 400));
+		npcDisplay.setPos(n_pos);
 		
 		pct_SB1_Now = 0.75;
 		pct_PS1_Now = 0.67;
@@ -153,7 +156,9 @@ class com.theck.ALIA.ALIA
 		
 		// Check for TargetChanged signal connection
 		CheckForSignalHookup();
-		kickstart(); // grab NPCs that already exist
+		
+		// This seems to crash client during loading screens
+		//kickstart(); // grab NPCs that already exist
 		
 		// Announce any relevant settings the first time Activate() is called w/in NYR
 		AnnounceSettings();
@@ -164,8 +169,9 @@ class com.theck.ALIA.ALIA
 		
 		// save the current position in the config
 		var config = new Archive();
-		config.AddEntry("alia_warnPosition", m_pos);
+		config.AddEntry("alia_warnPosition", w_pos);
 		config.AddEntry("alia_healthPosition", h_pos);
+		config.AddEntry("alia_npcPosition", n_pos);
 		
 		// save options
 		config.AddEntry("pct_warning", pct_warning.GetValue());
@@ -283,7 +289,7 @@ class com.theck.ALIA.ALIA
 	public function setPercentHealthFlag() { updateHealthDisplay = true; }
 	
 	public function HookUpNPCs(dynelId:ID32):Void {
-		DebugText("HookUpNPCs()");
+		//DebugText("HookUpNPCs()");
 		
 		// Notes: 
 		// dynelID and dynel.GetID() match, and give type:spawnid (e.g. 50000:12345). spawnid seems to be generated anew each time something is spawned
@@ -319,18 +325,22 @@ class com.theck.ALIA.ALIA
 		//DebugText("HookUpNPCs(): !alex is " + !alex );
 		if ( !alex && ( dynel.GetStat(112) == alex112 ) ) {
 			alex = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
+			alex.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
 			DebugText("HookUpNPCs(): Alex hooked")
 		}
 		else if ( !rose && ( dynel.GetStat(112) == rose112 ) ) {			
 			rose = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
+			rose.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
 			DebugText("HookUpNPCs(): Rose hooked")
 		}
 		else if ( !mei && ( dynel.GetStat(112) == mei112 ) ) {
 			mei = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
+			mei.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
 			DebugText("HookUpNPCs(): Mei hooked")		
 		}
 		else if ( !zuberi && ( dynel.GetStat(112) == zuberi112 ) ) {
 			zuberi = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
+			zuberi.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
 			DebugText("HookUpNPCs(): Zuberi hooked")		
 		}
 		
@@ -341,7 +351,9 @@ class com.theck.ALIA.ALIA
 		}
 		
 		// unhook this function if we have all the NPCs
-		if ( alex && rose && mei && zuberi ) { DisconnectVicinitySignals(); }
+		if ( alex && rose && mei && zuberi ) { 
+			DisconnectVicinitySignals(); 
+		}
 		
 		
 	}
@@ -463,14 +475,11 @@ class com.theck.ALIA.ALIA
 		DebugText("Lurker is casting " + spell);
 		
 		// only decay on the first shadow
-		//DebugText("SB1_Cast is " + SB1_Cast);
-		//DebugText("string SoT is " + stringShadowOutOfTime);
-		//DebugText("test is " + ( spell == stringShadowOutOfTime ));
 		if ( !SB1_Cast && ( spell == stringShadowOutOfTime ) )
 		{	
 			// delay changing the flag by 15 seconds so that we don't get personal space warnings during phase 2
-			setTimeout(Delegate.create(this, function(){this.SB1_Cast = true; }), 15000 );
-			SB1_Cast = true;
+			setTimeout(Delegate.create(this, function(){this.SB1_Cast = true; }), 20000 );
+			//SB1_Cast = true;
 			DebugText("SB1_Cast is " + SB1_Cast);
 			warningController.decayText(3);
 		}
@@ -491,25 +500,48 @@ class com.theck.ALIA.ALIA
 	////// Signal Connections //////
 	
 	public function LurkerDied() {
+		
 		healthController.UpdateText("Dead");
 		healthController.decayText(10);
-		ResetLurker();
+		
+		// disconnect lurker signals
+		DisconnectLurkerSignals();
+		lurkerLocked = false;
+		
+		// decay any remaining message, also stop blinking
+		warningController.decayText(3);
+		warningController.stopBlink();
+		npcDisplay.decayDisplay(3);
 	}
 	
 	public function ResetLurker() {
 		DebugText("Lurker signals disconnected, lurker unlocked")
 		
 		// Disconnect all of the lurker-specific signals
-		lurker.SignalStatChanged.Disconnect(LurkerStatChanged, this);
-		lurker.SignalCharacterDied.Disconnect(ResetLurker, this);
-		lurker.SignalCharacterDestructed.Disconnect(ResetLurker, this);
+		DisconnectLurkerSignals();
 		
 		// unlock targeting
 		lurkerLocked = false;
 		
+		// re-enable Vicinity Signals
+		// TODO: does this need to be delayed?
+		setTimeout(Delegate.create(this, ConnectVicinitySignals), 3000 );
+		//ConnectVicinitySignals();
+		
 		// decay any remaining message, also stop blinking
 		warningController.decayText(3);
 		warningController.stopBlink();
+	}
+	
+	public function ConnectLurkerSignals() {		
+		// Disconnect all of the lurker-specific signals
+		lurker.SignalStatChanged.Disconnect(LurkerStatChanged, this);
+		lurker.SignalCharacterDied.Disconnect(LurkerDied, this);
+		lurker.SignalCharacterDestructed.Disconnect(ResetLurker, this);
+	}
+	
+	public function DisconnectLurkerSignals() {
+		
 	}
 	
 	public function ConnectTargetChangedSignal() {
@@ -533,6 +565,10 @@ class com.theck.ALIA.ALIA
 		VicinitySystem.SignalDynelEnterVicinity.Connect(HookUpNPCs, this);
 		m_player.SignalOffensiveTargetChanged.Connect(HookUpNPCs, this);
 		m_player.SignalDefensiveTargetChanged.Connect(HookUpNPCs, this);
+		alex = undefined;
+		rose = undefined;
+		mei = undefined;
+		zuberi = undefined;
 		
 	}
 	
@@ -547,10 +583,10 @@ class com.theck.ALIA.ALIA
 	
 	////// GUI stuff //////
 	
-	public function CreateTextFields() {
-		DebugText("CreateTextFields()");
+	public function CreateGuiElements() {
+		DebugText("CreateGuiElements()");
 		
-		// if a text field doesn't already exist, create one
+		// if a warning field doesn't already exist, create one
 		if !warningController {
 			warningController = new TextFieldController(m_swfRoot, "warningText");
 			DebugText("Warning Controller created");
@@ -560,6 +596,12 @@ class com.theck.ALIA.ALIA
 		if !healthController {
 			healthController = new TextFieldController(m_swfRoot, "healthText");
 			DebugText("% Health Controller created");
+		}
+		
+		// if the NPC display doesn't already exist, create one
+		if !npcDisplay {
+			npcDisplay = new npcStatusDisplay(m_swfRoot);
+			DebugText("NPC Status Display created");
 		}
 		
 		// Set default text
@@ -598,6 +640,11 @@ class com.theck.ALIA.ALIA
 		warningController.blinkText();
 	}
     
+	private function UpdateNPCStatusDisplay() {
+		DebugText("UpdateNPCStatusDisplay()");
+		npcDisplay.UpdateAll(mei.GetStatus(), rose.GetStatus(), alex.GetStatus(), zuberi.GetStatus());
+	}
+	
     public function warningStartDrag() {
 		DebugText("warningStartDrag called");
         warningController.clip.startDrag();
@@ -608,9 +655,9 @@ class com.theck.ALIA.ALIA
         warningController.clip.stopDrag();
 		
 		// grab position for config storage on Deactivate()
-        m_pos = Common.getOnScreen(warningController.clip); 
+        w_pos = Common.getOnScreen(warningController.clip); 
 		
-		DebugText("warningStopDrag: x: " + m_pos.x + "  y: " + m_pos.y);
+		DebugText("warningStopDrag: x: " + w_pos.x + "  y: " + w_pos.y);
     }
 	
     public function pctHealthStartDrag() {
@@ -627,12 +674,28 @@ class com.theck.ALIA.ALIA
 		
 		DebugText("pctHealthStopDrag: x: " + h_pos.x + "  y: " + h_pos.y);
     }
+	
+    public function npcStartDrag() {
+		DebugText("npcStartDrag called");
+        npcDisplay.clip.startDrag();
+    }
+
+    public function npcStopDrag() {
+		DebugText("npcStopDrag called");
+        npcDisplay.clip.stopDrag();
+		
+		// grab position for config storage on Deactivate()
+        n_pos = Common.getOnScreen(npcDisplay.clip); 
+		
+		DebugText("npcStopDrag: x: " + n_pos.x + "  y: " + n_pos.y);
+    }
 
     public function GuiEdit(state:Boolean) {
 		//DebugText("GuiEdit called");
 		warningController.setVisible(IsNYR());
 		warningController.enableInteraction(false);
 		healthController.setVisible(IsNYR()); 
+		npcDisplay.setVisible(IsNYR());
 		
 		//only editable in NYR
 		if IsNYR() 
@@ -643,16 +706,18 @@ class com.theck.ALIA.ALIA
 				warningController.clip.onRelease = Delegate.create(this, warningStopDrag);
 				warningController.UpdateText("~~~~~ Move Me!! ~~~~~");
 				warningController.setVisible(true);
-				warningController.toggleBackground(true);
-				warningController.enableInteraction(true);
+				warningController.setGUIEdit(true);
 				warningController.stopBlink(); // probably unnecessary?
 				
 				healthController.clip.onPress = Delegate.create(this, pctHealthStartDrag);
 				healthController.clip.onRelease = Delegate.create(this, pctHealthStopDrag);
 				healthController.UpdateText("100%");
 				healthController.setVisible(true);
-				healthController.toggleBackground(true);
-				healthController.enableInteraction(true);
+				healthController.setGUIEdit(true);
+				
+				npcDisplay.setGUIEdit(true);
+				npcDisplay.clip.onPress = Delegate.create(this, npcStartDrag);
+				npcDisplay.clip.onRelease = Delegate.create(this, npcStopDrag);
 			} 
 			else {
 				DebugText("GuiEdit: state false");
@@ -661,15 +726,18 @@ class com.theck.ALIA.ALIA
 				warningController.clip.onRelease = undefined;
 				warningController.UpdateText("A Lurker Is Announced");
 				warningController.decayText(textDecayTime);
-				warningController.toggleBackground(false);
-				warningController.enableInteraction(false);
+				warningController.setGUIEdit(false);
 				warningController.stopBlink(); // probably unnecessary?
 				
 				healthController.clip.stopDrag();
 				healthController.clip.onPress = undefined;
 				healthController.clip.onRelease = undefined;
-				healthController.toggleBackground(false);
-				healthController.enableInteraction(false);
+				healthController.setGUIEdit(false);
+				
+				npcDisplay.clip.stopDrag();
+				npcDisplay.clip.onPress = undefined;
+				npcDisplay.clip.onRelease = undefined;
+				npcDisplay.setGUIEdit(false);
 			}
 		}
     }

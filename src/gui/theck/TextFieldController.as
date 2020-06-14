@@ -15,8 +15,6 @@ class gui.theck.TextFieldController
 	
     public var clip:MovieClip;
     private var field:TextField;
-	//private var defaultTextFormat:TextFormat = new TextFormat("_StandardFont", 30,0xFFFFFF, true);
-	//private var redTextFormat:TextFormat = new TextFormat("_StandardFont", 30,0xFF0000, true);
     
     public function TextFieldController(target:MovieClip, fieldName:String) 
     {
@@ -33,7 +31,7 @@ class gui.theck.TextFieldController
 		field.backgroundColor = 0x000000;
     }
     
-    public function UpdateText(text){
+    public function UpdateText(text) {
 		Debugger.DebugText("UpdateText called", debugMode);
 		Tweener.removeTweens(field);
         field._alpha = 100;
@@ -41,43 +39,41 @@ class gui.theck.TextFieldController
 		field.textColor = 0xFFFFFF;
     }
 
-	public function decayText(decayTime){
+	public function decayText(decayTime) {
 		Debugger.DebugText("decayText called", debugMode);
 		Tweener.addTween(field, {_alpha : 0, delay : 2, time : decayTime});	
         //setTimeout(Delegate.create(this, stopBlink), decayTime*1000 + 500);
 	}
 	
-	public function setPos(pos:Point)
-	{
+	public function setPos(pos:Point) {
 		clip._x = pos.x;
 		clip._y = pos.y;
 	}
 	
-	public function getPos()
-	{
-		// this doesn't work
-		var pos:Point = new Point(field._x, field._y);
+	public function getPos() {
+		var pos:Point = new Point(clip._x, clip._y);
 		Debugger.DebugText("getPos: x: " + pos.x + "  y: " + pos.y, debugMode);
 		return pos;
 	}
 	
-	public function setVisible(flag:Boolean)
-	{
+	public function setVisible(flag:Boolean) {
 		field._visible = flag;	
 	}
 	
-	public function toggleBackground(flag:Boolean)
-	{
+	public function toggleBackground(flag:Boolean) {
 		field.background = flag;
 	}
 	
-	public function setTextColor(color:Number)
-	{
+	public function setTextColor(color:Number) {
 		field.textColor = color;
 	}
 	
-    public function blinkText()
-    {
+	public function setGUIEdit(state:Boolean) {
+		toggleBackground(state);
+		enableInteraction(state);
+	}
+	
+    public function blinkText() {
 		Debugger.DebugText("blinkText called", debugMode);
 		
 		// clear any existing blinking effects first
@@ -98,15 +94,13 @@ class gui.theck.TextFieldController
         }), 50);
     }
     
-    public function stopBlink()
-    {
+    public function stopBlink() {
 		Debugger.DebugText("stopBlink called", debugMode);
         clearInterval(clip.blinkInterval);
         clip.transform.colorTransform = new ColorTransform();
     }
 
-	public function enableInteraction(state:Boolean)
-	{
+	public function enableInteraction(state:Boolean) {
 		clip.hitTestDisable = !state;
 		field.hitTestDisable = !state;
 	}
