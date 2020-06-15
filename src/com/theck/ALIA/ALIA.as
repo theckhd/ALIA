@@ -27,7 +27,7 @@ import flash.geom.Point;
 class com.theck.ALIA.ALIA 
 {
 	// toggle debug messages and enable addon outisde of NYR
-	static var debugMode:Boolean = false;
+	static var debugMode:Boolean = true;
 	
 	// basic settings and text strings
 	static var stringLurker:String = LDBFormat.LDBGetText(51000, 32030);
@@ -61,7 +61,6 @@ class com.theck.ALIA.ALIA
 	private var npcDisplay:npcStatusDisplay;
 	
 	// logic flags
-	private var lurkerLocked:Boolean;
 	private var Ann_SB1_Soon:Boolean;
 	private var Ann_SB1_Now:Boolean;;
 	private var SB1_Cast:Boolean;
@@ -82,9 +81,10 @@ class com.theck.ALIA.ALIA
 	private var pct_PS3_Now:Number;
 	private var pct_FR_Now:Number;
 	private var pct_warning:DistributedValue;
-	
-	
+
+	//////////////////////////////
 	////// Addon Management //////
+	//////////////////////////////
 	
 	public function ALIA(swfRoot:MovieClip) {
         m_swfRoot = swfRoot;
@@ -99,7 +99,6 @@ class com.theck.ALIA.ALIA
 		
 		// grab character
 		m_player = Character.GetClientCharacter();	
-		lurkerLocked = false;		
 		
 		//create text field, connect to GuiEdit
 		CreateGuiElements();
@@ -110,17 +109,6 @@ class com.theck.ALIA.ALIA
 		
 		// announce settings flag
 		AnnounceSettingsBool = true;
-			
-/*		// debugging text strings
-		DebugText("~~~Text String testing~~");
-		DebugText("shadow: " + stringShadowOutOfTime);
-		DebugText("ps: " + stringPersonalSpace);
-		DebugText("fr: " + stringFinalResort);
-		// these all give "The Unutterable Lurker"
-		DebugText("51000,32030 is " + LDBFormat.LDBGetText(51000, 32030),debugMode);
-		DebugText("51000,32433 is " + LDBFormat.LDBGetText(51000, 32433),debugMode);
-		DebugText("51000,32030 is " + LDBFormat.LDBGetText(51000, 32030),debugMode); 
-		DebugText("~~~~~~~~~~~~~~~~~~~~~~~");*/
 	}
 
 	public function Unload() {		
@@ -128,7 +116,7 @@ class com.theck.ALIA.ALIA
 		
 		// disconnect all signals
 		ResetLurker();
-		DisconnectTargetChangedSignal();
+		//DisconnectTargetChangedSignal();
 		pct_warning.SignalChanged.Disconnect(SettingsChanged, this);
 	}
 	
@@ -154,8 +142,8 @@ class com.theck.ALIA.ALIA
 		// set options
 		pct_warning.SetValue(config.FindEntry("pct_warning", 3));
 		
-		// Check for TargetChanged signal connection
-		CheckForSignalHookup();
+		// Initialize vicinity signal and update visibility
+		Initialize();
 		
 		// This seems to crash client during loading screens
 		//kickstart(); // grab NPCs that already exist
@@ -205,18 +193,18 @@ class com.theck.ALIA.ALIA
 		AnnounceSettings();
 	}
 		
-	public function CheckForSignalHookup() {	
+	public function Initialize() {	
 		// if in NYR, connect to the TargetChanged signal 
 		if (IsNYR())
 		{	
-			ConnectTargetChangedSignal();
+			//ConnectTargetChangedSignal();
 			ConnectVicinitySignals();
 		}
 		else
 		{		
 			// disconnect all signals
 			ResetLurker();
-			DisconnectTargetChangedSignal();
+			//DisconnectTargetChangedSignal();
 			DisconnectVicinitySignals();
 		}
 		
@@ -249,50 +237,16 @@ class com.theck.ALIA.ALIA
 		
 	}
 	
+	/////////////////////////////
 	////// Encounter Logic //////
-	
-	public function TargetChanged(id:ID32) {	
-		//DebugText("TargetChanged id passed is " + id,debugMode);
-				
-		// If we haven't yet locked on to lurker and this id is useful
-		if (!lurkerLocked && !id.IsNull()) {
-			
-			// update current target variable
-			var currentTarget = Character.GetCharacter(id);
-			DebugText("currentTarget GetName is " + currentTarget.GetName()); //dump name for testing
-			
-			// if the current target's name is "The Unutterable Lurker" (32030, 32433, 32030 should all work here)
-			if (currentTarget.GetName() == stringLurker ) {
-				
-				// set flags for announcements to true
-				ResetAnnounceFlags();
-				
-				// store lurker variable
-				lurker = currentTarget;
-				
-				// Connect to statchanged signal
-				lurker.SignalStatChanged.Connect(LurkerStatChanged, this);
-				lurker.SignalCommandStarted.Connect(LurkerCasting, this);
-				
-				// Connect deat/wipe signals to a function that resets signal connections 
-				lurker.SignalCharacterDied.Connect(LurkerDied, this);
-				lurker.SignalCharacterDestructed.Connect(ResetLurker, this);
-				
-				// Lock on lurker so that we don't continue to check targets anymore
-				lurkerLocked = true;
-				updateHealthDisplay = true;
-				DebugText("Lurker Locked!!")
-				// TODO: should we just call DisconnectTargetChangedSignal() here and remove hte lurkerLocked flag?
-			}
-		}
-	}
-	
+	/////////////////////////////
+
 	public function setPercentHealthFlag() { updateHealthDisplay = true; }
 	
-	public function HookUpNPCs(dynelId:ID32):Void {
-		//DebugText("HookUpNPCs()");
+	public function DetectNPCs(dynelId:ID32):Void {
+		//DebugText("DetectNPCs()");
 		
-		// Notes: 
+		/* Notes: 
 		// dynelID and dynel.GetID() match, and give type:spawnid (e.g. 50000:12345). spawnid seems to be generated anew each time something is spawned
 		// GetType() and m_Type are 50000 for all characters (players, hostile and friendly npcs, etc)
 		// GetNameTagCategory() seems to return 5 for NPCs (hostile or friendly), but 6 for lurker (probably "boss")
@@ -305,12 +259,14 @@ class com.theck.ALIA.ALIA
 		//	E1: 32433 (first spawn), 32030 (after wipe)
 		//	E5: 37256 (first pull), 37255 (after wipe)
 		// 	E10: 35448 (First pull), 35449 (after wipe)
+		*/
 		
 		// bail if this isn't a character
 		if dynelId.GetType() != 50000 {return; }
 		
 		var dynel:Dynel = Dynel.GetDynel(dynelId);
 		
+		/* Debugging stuff
 		//DebugText("Dynel GetName(): " + dynel.GetName());
 		//DebugText("Dynel Id: " + dynelId);
 		//DebugText("Dynel GetID(): " + dynel.GetID());
@@ -319,62 +275,60 @@ class com.theck.ALIA.ALIA
 		//DebugText("Dynel GetType(): " + dynelId.GetType());
 		//DebugText("Dynel NameTagCategory: " + dynel.GetNametagCategory());
 		//DebugText("Dynel Stat 112: " + dynel.GetStat(112));
+		*/
 		
-		//DebugText("HookUpNPCs(): !alex is " + !alex );
-		if ( !alex && ( dynel.GetStat(112) == alex112 ) ) {
-			alex = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
-			alex.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
-			DebugText("HookUpNPCs(): Alex hooked")
-		}
-		else if ( !rose && ( dynel.GetStat(112) == rose112 ) ) {			
-			rose = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
-			rose.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
-			DebugText("HookUpNPCs(): Rose hooked")
-		}
-		else if ( !mei && ( dynel.GetStat(112) == mei112 ) ) {
-			mei = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
-			mei.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
-			DebugText("HookUpNPCs(): Mei hooked")		
-		}
-		else if ( !zuberi && ( dynel.GetStat(112) == zuberi112 ) ) {
-			zuberi = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
-			zuberi.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
-			DebugText("HookUpNPCs(): Zuberi hooked")		
+		// check for lurker first
+		if ( !lurker && dynel.GetName() == stringLurker ) {
+			DebugText("DetectNPCs(): Lurker could be locked here")
+			
+			// store lurker variable
+			lurker = Character.GetCharacter(dynel.GetID());
+			
+			// Connect to lurker-specific signals
+			ConnectLurkerSignals();
+			
+			// set flags for announcements to true
+			ResetAnnounceFlags();
+			
+			// Lock on lurker so that we don't continue to check targets anymore
+			updateHealthDisplay = true;
+			DebugText("DetectNPCs(): Lurker hooked")
 		}
 		
-		if ( dynel.GetName() == stringLurker ) {
-			DebugText("HookUpNPCs(): Lurker could be locked here")
-			//lurker = Character.GetCharacter(dynel.GetID());
-			//lurkerLocked = true;
+		// only connect helpful NPCs if we have lurker already (avoids entrance grab)
+		else if ( lurker ) {
+			if ( !alex && ( dynel.GetStat(112) == alex112 ) ) {
+				alex = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
+				alex.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
+				UpdateNPCStatusDisplay();
+				DebugText("DetectNPCs(): Alex hooked")
+			}
+			else if ( !rose && ( dynel.GetStat(112) == rose112 ) ) {			
+				rose = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
+				rose.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
+				UpdateNPCStatusDisplay();
+				DebugText("DetectNPCs(): Rose hooked")
+			}
+			else if ( !mei && ( dynel.GetStat(112) == mei112 ) ) {
+				mei = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
+				mei.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
+				UpdateNPCStatusDisplay();
+				DebugText("DetectNPCs(): Mei hooked")		
+			}
+			else if ( !zuberi && ( dynel.GetStat(112) == zuberi112 ) ) {
+				zuberi = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
+				zuberi.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
+				UpdateNPCStatusDisplay();
+				DebugText("DetectNPCs(): Zuberi hooked")		
+			}
 		}
 		
 		// unhook this function if we have all the NPCs
-		if ( alex && rose && mei && zuberi ) { 
+		if ( alex && rose && mei && zuberi && lurker ) { 
 			DisconnectVicinitySignals(); 
 		}
 		
 		
-	}
-	
-	public function CheckBuff(buffID:Number) {
-		// Notes: Potentially useful buffIDs:
-		// 7863490: "Knocked Down",
-		// 7945521: "Gaia Incarnate - Rose",
-		// 7945522: "Gaia Incarnate - Alex",
-		// 7945523: "Gaia Incarnate - Mei Ling",
-		// 7854429: "From Beneath You, It Devours",
-		// 8907521": "Inevitable Doom",
-		DebugText("CheckBuff(): buffID is " + buffID);
-	}
-	
-	// from LairTracker - find dynels that were already loaded before connecting signals
-	private function kickstart() {
-		DebugText("kickstart()");
-		var ls:WeakList = Dynel.s_DynelList
-		for (var num = 0; num < ls.GetLength(); num++) {
-			var dyn:Character = ls.GetObject(num);
-			HookUpNPCs(dyn.GetID());
-		}
 	}
 	
 	public function LurkerStatChanged(stat)	{
@@ -391,8 +345,7 @@ class com.theck.ALIA.ALIA
 			if (updateHealthDisplay) {
 			
 				// pick one of these two
-				//healthController.UpdateText( Math.round(pct * 1000) / 10 + "%");
-				UpdateHealthText(Math.round(pct * 1000) / 10 + "%");
+				healthController.UpdateText( Math.round(pct * 1000) / 10 + "%");
 				
 				updateHealthDisplay = false;
 				setTimeout(Delegate.create(this, setPercentHealthFlag), 250 );
@@ -473,9 +426,7 @@ class com.theck.ALIA.ALIA
 		if ( !SB1_Cast && ( spell == stringShadowOutOfTime ) )
 		{	
 			// delay changing the flag by 15 seconds so that we don't get personal space warnings during phase 2
-			setTimeout(Delegate.create(this, function(){this.SB1_Cast = true; }), 20000 );
-			//SB1_Cast = true;
-			DebugText("SB1_Cast is " + SB1_Cast);
+			setTimeout(Delegate.create(this, SetShadow1Flag), 25000 );
 			warningController.decayText(3);
 		}
 		// decay on every PS
@@ -492,7 +443,14 @@ class com.theck.ALIA.ALIA
 		}		
 	}
 	
+	private function SetShadow1Flag() {
+		SB1_Cast = true;
+		DebugText("SetShadow1Flag(): " + SB1_Cast);
+	}
+	
+	////////////////////////////////
 	////// Signal Connections //////
+	////////////////////////////////
 	
 	public function LurkerDied() {
 		
@@ -501,7 +459,7 @@ class com.theck.ALIA.ALIA
 		
 		// disconnect lurker signals
 		DisconnectLurkerSignals();
-		lurkerLocked = false;
+		lurker = undefined; // probably not needed
 		
 		// decay any remaining message, also stop blinking
 		warningController.decayText(3);
@@ -515,68 +473,64 @@ class com.theck.ALIA.ALIA
 		// Disconnect all of the lurker-specific signals
 		DisconnectLurkerSignals();
 		
-		// unlock targeting
-		lurkerLocked = false;
-		
 		// re-enable Vicinity Signals
-		// TODO: does this need to be delayed?
 		setTimeout(Delegate.create(this, ConnectVicinitySignals), 3000 );
-		//ConnectVicinitySignals();
 		
 		// decay any remaining message, also stop blinking
 		warningController.decayText(3);
 		warningController.stopBlink();
 	}
 	
-	public function ConnectLurkerSignals() {		
-		// Disconnect all of the lurker-specific signals
-		lurker.SignalStatChanged.Disconnect(LurkerStatChanged, this);
-		lurker.SignalCharacterDied.Disconnect(LurkerDied, this);
-		lurker.SignalCharacterDestructed.Disconnect(ResetLurker, this);
+	public function ConnectLurkerSignals() {	
+		DebugText("ConnectLurkerSignals()");
+		
+		// Connect to statchanged signal
+		lurker.SignalStatChanged.Connect(LurkerStatChanged, this);
+		lurker.SignalCommandStarted.Connect(LurkerCasting, this);
+		
+		// Connect deat/wipe signals to a function that resets signal connections 
+		lurker.SignalCharacterDied.Connect(LurkerDied, this);
+		lurker.SignalCharacterDestructed.Connect(ResetLurker, this);	
 	}
 	
 	public function DisconnectLurkerSignals() {
 		
-	}
-	
-	public function ConnectTargetChangedSignal() {
-		DebugText("TargetChanged connected")
-		
-		// connects to targetchanged signal to search for lurker
-		m_player.SignalOffensiveTargetChanged.Connect(TargetChanged, this);
-		
-	}
-		
-	public function DisconnectTargetChangedSignal()	{
-		DebugText("TargetChanged disconnected")
-		
-		// disconnect targetchanged signal (usually called only when leaving NYR)
-		m_player.SignalOffensiveTargetChanged.Disconnect(TargetChanged, this);
+		// Disconnect all of the lurker-specific signals
+		lurker.SignalStatChanged.Disconnect(LurkerStatChanged, this);
+		lurker.SignalCharacterDied.Disconnect(LurkerDied, this);
+		lurker.SignalCharacterDestructed.Disconnect(ResetLurker, this);		
 	}
 	
 	public function ConnectVicinitySignals() {
 		DebugText("ConnectVicinitySignal()");
 		
-		VicinitySystem.SignalDynelEnterVicinity.Connect(HookUpNPCs, this);
-		m_player.SignalOffensiveTargetChanged.Connect(HookUpNPCs, this);
-		m_player.SignalDefensiveTargetChanged.Connect(HookUpNPCs, this);
+		VicinitySystem.SignalDynelEnterVicinity.Connect(DetectNPCs, this);
+		m_player.SignalOffensiveTargetChanged.Connect(DetectNPCs, this);
+		m_player.SignalDefensiveTargetChanged.Connect(DetectNPCs, this);
+		
+		// reset all of the character variables
 		alex = undefined;
 		rose = undefined;
 		mei = undefined;
 		zuberi = undefined;
+		lurker = undefined;
+		
+		UpdateNPCStatusDisplay();
 		
 	}
 	
 	public function DisconnectVicinitySignals()	{
 		DebugText("DisconnectVicinitySignal()");
 		
-		VicinitySystem.SignalDynelEnterVicinity.Disconnect(HookUpNPCs, this);
-		m_player.SignalOffensiveTargetChanged.Disconnect(HookUpNPCs, this);
-		m_player.SignalDefensiveTargetChanged.Disconnect(HookUpNPCs, this);
+		VicinitySystem.SignalDynelEnterVicinity.Disconnect(DetectNPCs, this);
+		m_player.SignalOffensiveTargetChanged.Disconnect(DetectNPCs, this);
+		m_player.SignalDefensiveTargetChanged.Disconnect(DetectNPCs, this);
 		
 	}
 	
+	///////////////////////
 	////// GUI stuff //////
+	///////////////////////
 	
 	public function CreateGuiElements() {
 		DebugText("CreateGuiElements()");
@@ -608,11 +562,6 @@ class com.theck.ALIA.ALIA
         GuiEdit();
     }
 	
-	private function UpdateHealthText(text:String) {
-		// update health display
-		healthController.UpdateText(text);
-	}
-	
 	private function UpdateWarning(text:String)	{
 		// print text to chat, stop any existing blink effects, and update the text field
 		com.GameInterface.UtilsBase.PrintChatText(text);
@@ -636,7 +585,7 @@ class com.theck.ALIA.ALIA
 	}
     
 	private function UpdateNPCStatusDisplay() {
-		DebugText("UpdateNPCStatusDisplay()");
+		DebugText("UpdateNPCStatusDisplay(): m: " + mei.GetStatus() + " r: " + rose.GetStatus() + " a: " + alex.GetStatus() + " z: " + zuberi.GetStatus() );
 		npcDisplay.UpdateAll(mei.GetStatus(), rose.GetStatus(), alex.GetStatus(), zuberi.GetStatus());
 	}
 	
@@ -742,4 +691,68 @@ class com.theck.ALIA.ALIA
 		if (debugMode) Debugger.PrintText(text);
 	}
 	
+	
+	///////////////////////////////////////
+	////// Deprecated - delete later //////
+	///////////////////////////////////////
+		
+/*	public function TargetChanged(id:ID32) {	
+		//DebugText("TargetChanged id passed is " + id,debugMode);
+				
+		// If we haven't yet locked on to lurker and this id is useful
+		if (!lurkerLocked && !id.IsNull()) {
+			
+			// update current target variable
+			var currentTarget = Character.GetCharacter(id);
+			DebugText("currentTarget GetName is " + currentTarget.GetName()); //dump name for testing
+			
+			// if the current target's name is "The Unutterable Lurker" (32030, 32433, 32030 should all work here)
+			if (currentTarget.GetName() == stringLurker ) {
+				
+				// set flags for announcements to true
+				ResetAnnounceFlags();
+				
+				// store lurker variable
+				lurker = currentTarget;
+				
+				// Connect to lurker-specific signals
+				ConnectLurkerSignals();
+				
+				// Lock on lurker so that we don't continue to check targets anymore
+				lurkerLocked = true;
+				updateHealthDisplay = true;
+				DebugText("Lurker Locked!!")
+				// TODO: should we just call DisconnectTargetChangedSignal() here and remove hte lurkerLocked flag?
+			}
+		}
+	}
+	
+	
+	
+	public function ConnectTargetChangedSignal() {
+		DebugText("TargetChanged connected")
+		
+		// connects to targetchanged signal to search for lurker
+		m_player.SignalOffensiveTargetChanged.Connect(TargetChanged, this);
+		
+	}
+		
+	public function DisconnectTargetChangedSignal()	{
+		DebugText("TargetChanged disconnected")
+		
+		// disconnect targetchanged signal (usually called only when leaving NYR)
+		m_player.SignalOffensiveTargetChanged.Disconnect(TargetChanged, this);
+	}
+	
+	// from LairTracker - find dynels that were already loaded before connecting signals
+	private function kickstart() {
+		DebugText("kickstart()");
+		var ls:WeakList = Dynel.s_DynelList
+		for (var num = 0; num < ls.GetLength(); num++) {
+			var dyn:Character = ls.GetObject(num);
+			DetectNPCs(dyn.GetID());
+		}
+	}
+	*/
+
 }

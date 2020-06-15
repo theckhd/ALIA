@@ -88,6 +88,12 @@ class gui.theck.npcStatusDisplay
 	public function setGUIEdit(state:Boolean) {
 		toggleBackground(state);
 		enableInteraction(state);
+		if state {
+			UpdateAll(0, 0, 0, 0);			
+		}
+		else {
+			UpdateAll(undefined, undefined, undefined, undefined);
+		}
 	}
 	
 	public function UpdateAll(meiStatus:Number, roseStatus:Number, alexStatus:Number, zuberiStatus:Number) {
@@ -106,9 +112,11 @@ class gui.theck.npcStatusDisplay
 	private function UpdateField(field:TextField, status:Number) {
 		//Debugger.DebugText("UpdateField()", debugMode);
 		
-		//stopBlinkField(field);
-		field.textColor = statusColors[status];
-		//if (status > 3) {blinkField( field) };
+		// sanitize input (sometimes npcs - alex in particular - aren't yet detected when this is called)
+		//if ( status == undefined ) { status = 0 };
+		
+		// set text color according to status
+		field.textColor = statusColors[status];		
 	}
 	
 	public function setPos(pos:Point) {

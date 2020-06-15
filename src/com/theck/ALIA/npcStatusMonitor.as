@@ -14,12 +14,12 @@ class com.theck.ALIA.npcStatusMonitor
 	public var char:Character;
 	public var state:Number;
 	
-	static var gaiaRose:Number = 7945521;
-	static var gaiaAlex:Number = 7945522;
-	static var gaiaMei:Number = 7945523;
-	static var podded:Number = 7854429; // also 7970812 (SM - E10) and 8934432 (E10), but this one seems to work
-	static var podIncoming:Number = 8907521;
-	static var knockedDown:Number = 7863490;
+	static var gaiaRose:Number = 7945521; // 7945521: "Gaia Incarnate - Rose",
+	static var gaiaAlex:Number = 7945522; // 7945522: "Gaia Incarnate - Alex",
+	static var gaiaMei:Number = 7945523; // 7945523: "Gaia Incarnate - Mei Ling",
+	static var podded:Number = 7854429; // 7854429: "From Beneath You, It Devours", also 7970812 (SM - E10) and 8934432 (E10), but this one seems to work
+	static var podIncoming:Number = 8907521; // 8907521": "Inevitable Doom",
+	static var knockedDown:Number = 7863490; // 7863490: "Knocked Down", this happens when a fist hits them, but doesn't disable anything
 	static var incapped:Number = 8907542;
 	// other interesting casts:
 	// 9124231 - Digestive Slime
@@ -54,7 +54,7 @@ class com.theck.ALIA.npcStatusMonitor
 			state = 3;
 			StatusChanged.Emit();
 		}
-		else if ( char.m_BuffList[incapped] || char.m_BuffList[knockedDown] ) {
+		else if char.m_BuffList[incapped] {
 			state = 2;
 			StatusChanged.Emit();
 		}
