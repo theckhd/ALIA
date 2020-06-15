@@ -29,7 +29,7 @@ Currently there are three text fields that appear. The displays only appear when
     - Green: Providing Buff
     - Yellow: Targeted by pod
     - Red: Podded
-    - Grey: Incapacitated (waiting to be helped up)
+    - Grey: Incapacitated (waiting to be picked up)
     - White: Not providing buff, but no status ailments (i.e. while running back to their spot)
     - Black: NPC not yet detected (usually most of phase 1 & 2)
   - Letters are just M (Mei Ling / Melee), R (Rose / Mid-range), A (Alex / long range), and Z (Zuberi)
