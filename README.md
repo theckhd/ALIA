@@ -25,6 +25,7 @@ Currently there are three text fields that appear. The displays only appear when
 
 - An NPC display
   - Displays the status of each NPC as a color-coded letter
+  - Also displays warning text for "Podded" and "Doomed" (pod incoming) NPCs.
   - Color codes are:
     - Green: Providing Buff
     - Yellow: Targeted by pod
