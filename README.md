@@ -4,7 +4,7 @@ This Secret World Legends addon provides announcements for important events in t
 Currently there are three text fields that appear. The displays only appear when in the Manhattan Exclusion Zone, the addon basically goes to sleep outside of that zone.
 
 
-![Screenshot of addon during encounter](screens/alia_npcs_health.png) ![Screenshot of addon during encounter](screens/alia_warning.png)
+![Screenshot of addon during encounter](screens/alia_npcs_health_2.png) ![Screenshot of addon during encounter](screens/alia_warning.png)
 
 - A health display 
   - This shows the Lurker's current health percentage
