@@ -12,17 +12,24 @@ class gui.theck.npcStatusDisplay
 {
 	// toggle debug messages
 	static var debugMode = false;
-	// status colors: White (running), Green (buffing), Gray (knocked down), Yellow (pod inc), Red (podded)
+	
+	// status colors: White (running), Green (buffing), Gray (incapacitated), Yellow (pod inc), Red (podded)
 	static var statusColors:Array = new Array(0xFFFFFF, 0x008000, 0xA4A4A4, 0xFFC300 , 0xFF0000);
+	static var statusText:Array = new Array("", "", "", "Doomed" , "Podded");
 		
     public var clip:MovieClip;
     private var alexLetter:TextField;
     private var roseLetter:TextField;
     private var meiLetter:TextField;
     private var zuberiLetter:TextField;
+    private var alexStatusText:TextField;
+    private var roseStatusText:TextField;
+    private var meiStatusText:TextField;
+    private var zuberiStatusText:TextField;
 	
 	static var textSize:Number = 30;
-	static var boxSize:Number = textSize*1.35;
+	static var boxSize:Number = textSize * 1.35;
+	static var statusTextWidth:Number = textSize * 4;
 	
 	public function npcStatusDisplay(target:MovieClip) 
 	{
@@ -35,15 +42,25 @@ class gui.theck.npcStatusDisplay
         alexLetter = clip.createTextField("alex", clip.getNextHighestDepth(), 0, 2*boxSize, boxSize, boxSize);
 		zuberiLetter = clip.createTextField("zuberi", clip.getNextHighestDepth(), 0, 3*boxSize, boxSize, boxSize);
 		
-		InitializeTextField(meiLetter);
-		InitializeTextField(roseLetter);
-		InitializeTextField(alexLetter);
-		InitializeTextField(zuberiLetter);
+		InitializeLetter(meiLetter);
+		InitializeLetter(roseLetter);
+		InitializeLetter(alexLetter);
+		InitializeLetter(zuberiLetter);
+		
+		meiStatusText = clip.createTextField("meiStatus", clip.getNextHighestDepth(), boxSize, 0, statusTextWidth, boxSize);
+		roseStatusText = clip.createTextField("roseStatus", clip.getNextHighestDepth(), boxSize, boxSize, statusTextWidth, boxSize);
+		alexStatusText = clip.createTextField("alexStatus", clip.getNextHighestDepth(), boxSize, 2*boxSize, statusTextWidth, boxSize);
+		zuberiStatusText = clip.createTextField("zuberiStatus", clip.getNextHighestDepth(), boxSize, 3*boxSize, statusTextWidth, boxSize);
+		
+		InitializeStatusText(meiStatusText);
+		InitializeStatusText(roseStatusText);
+		InitializeStatusText(alexStatusText);
+		InitializeStatusText(zuberiStatusText);
 	}
 	
 	
 	
-	public function InitializeTextField(field:TextField) {	
+	public function InitializeLetter(field:TextField) {	
 		
         var textFormat:TextFormat = new TextFormat("_StandardFont", textSize,0xFFFFFF, true);
         textFormat.align = "center"	
@@ -60,17 +77,34 @@ class gui.theck.npcStatusDisplay
 				break;
 			case "rose":
 				field.text = "R";
-				//field._y += boxSize;
 				break;
 			case "alex":
 				field.text = "A";
-				//field._y += 2*(boxSize);
 				break;
 			case "zuberi":
 				field.text = "Z";
-				//field._y += 3*(boxSize);
-				break;			
+				break;		
 		}		
+	}
+	
+	public function InitializeStatusText(field:TextField) {
+		var textFormat:TextFormat = new TextFormat("_StandardFont", textSize,0xFFFFFF, true);
+        textFormat.align = "left"	
+		
+        field.setNewTextFormat(textFormat);
+        //field.autoSize = "left";
+		field.background = true;
+		field.backgroundColor = 0x000000;
+		//field.border = true;
+		
+		//SetFakeStatusText();
+	}
+	
+	private function SetFakeStatusText() {
+		meiStatusText.text = "Doomed";
+		roseStatusText.text = "Podded";
+		alexStatusText.text = "OK";
+		zuberiStatusText.text = "High";
 	}
 	
 	public function EnableGUIEdit(state:Boolean)
@@ -89,7 +123,8 @@ class gui.theck.npcStatusDisplay
 		toggleBackground(state);
 		enableInteraction(state);
 		if state {
-			UpdateAll(0, 0, 0, 0);			
+			UpdateAll(0, 0, 0, 0);
+			SetFakeStatusText();
 		}
 		else {
 			UpdateAll(undefined, undefined, undefined, undefined);
@@ -103,20 +138,38 @@ class gui.theck.npcStatusDisplay
 		Tweener.removeTweens(clip);
 		
 		// update each text field with the appropriate status
-		UpdateField(meiLetter, meiStatus);
-		UpdateField(roseLetter, roseStatus);
-		UpdateField(alexLetter, alexStatus);
-		UpdateField(zuberiLetter, zuberiStatus);		
+		UpdateLetter(meiLetter, meiStatus);
+		UpdateLetter(roseLetter, roseStatus);
+		UpdateLetter(alexLetter, alexStatus);
+		UpdateLetter(zuberiLetter, zuberiStatus);	
+		UpdateStatusText(meiStatusText, meiStatus);
+		UpdateStatusText(roseStatusText, roseStatus);
+		UpdateStatusText(alexStatusText, alexStatus);
+		UpdateStatusText(zuberiStatusText, zuberiStatus);	
     }
 	
-	private function UpdateField(field:TextField, status:Number) {
-		//Debugger.DebugText("UpdateField()", debugMode);
+	private function UpdateLetter(field:TextField, status:Number) {
+		//Debugger.DebugText("UpdateLetter()", debugMode);
 		
 		// sanitize input (sometimes npcs - alex in particular - aren't yet detected when this is called)
 		//if ( status == undefined ) { status = 0 };
 		
 		// set text color according to status
 		field.textColor = statusColors[status];		
+	}
+	
+	private function UpdateStatusText(field:TextField, status:Number) {
+		//Debugger.DebugText("UpdateLetter()", debugMode);
+		
+		// sanitize input (sometimes npcs - alex in particular - aren't yet detected when this is called)
+		//if ( status == undefined ) { status = 0 };
+		
+		// set text color according to status
+		field.textColor = statusColors[status];
+		
+		// sanitize this so that we don't spit out "undefined" after a GUIEdit
+		if ( status == undefined ) { status = 0 };
+		field.text = statusText[status];
 	}
 	
 	public function setPos(pos:Point) {
@@ -139,6 +192,10 @@ class gui.theck.npcStatusDisplay
 		roseLetter.background = flag;
 		meiLetter.background = flag;
 		zuberiLetter.background = flag;		
+		alexStatusText.background = flag;
+		meiStatusText.background = flag;
+		roseStatusText.background = flag;
+		zuberiStatusText.background = flag;		
 	}
 	
 	//public function setTextColor(color:Number) {
@@ -151,6 +208,10 @@ class gui.theck.npcStatusDisplay
 		meiLetter.hitTestDisable = !state;
 		roseLetter.hitTestDisable = !state;
 		zuberiLetter.hitTestDisable = !state;
+		alexStatusText.hitTestDisable = !state;
+		meiStatusText.hitTestDisable = !state;
+		roseStatusText.hitTestDisable = !state;
+		zuberiStatusText.hitTestDisable = !state;
 	}
 	
 	public function decayDisplay(decayTime) {
