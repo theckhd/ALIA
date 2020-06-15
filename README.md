@@ -39,5 +39,7 @@ Currently there are three text fields that appear. The displays only appear when
 
 The displays can be moved (click & drag) in GUIEdit mode, and save their position between sessions.
 
-![Screenshot in GUIEdit Mode](alia_guiedit.png)
+![Screenshot in GUIEdit Mode](screens/alia_guiedit.png)
+
+To install the addon, grab the latest release, download the zip file (i.e. ALIA-v0.x.zip), and extract it to your game's "\Secret World Legends\Data\Gui\Custom\Flash\" folder.
 
