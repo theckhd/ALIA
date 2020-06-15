@@ -3,14 +3,14 @@
 * @author theck
 */
 
-import com.GameInterface.CharacterCreation.CharacterCreation;
+//import com.GameInterface.CharacterCreation.CharacterCreation;
 import com.GameInterface.DistributedValue;
-import com.GameInterface.DistributedValueBase;
+//import com.GameInterface.DistributedValueBase;
 import com.GameInterface.Game.Character;
 import com.GameInterface.Game.Dynel;
 import com.GameInterface.VicinitySystem;
-import com.GameInterface.ProjectUtilsBase;
-import com.Utils.WeakList;
+//import com.GameInterface.ProjectUtilsBase;
+//import com.Utils.WeakList;
 import com.Utils.ID32;
 import com.Utils.Archive;
 import com.Utils.LDBFormat;
@@ -27,7 +27,7 @@ import flash.geom.Point;
 class com.theck.ALIA.ALIA 
 {
 	// toggle debug messages and enable addon outisde of NYR
-	static var debugMode:Boolean = true;
+	static var debugMode:Boolean = false;
 	
 	// basic settings and text strings
 	static var stringLurker:String = LDBFormat.LDBGetText(51000, 32030);

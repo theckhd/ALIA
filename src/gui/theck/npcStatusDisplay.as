@@ -5,8 +5,8 @@
 import caurina.transitions.Tweener;
 import flash.geom.Point;
 import com.theck.Utils.Debugger;
-import flash.geom.ColorTransform;
-import mx.utils.Delegate;
+//import flash.geom.ColorTransform;
+//import mx.utils.Delegate;
 
 class gui.theck.npcStatusDisplay
 {
