@@ -183,8 +183,15 @@ class gui.theck.npcStatusDisplay
 		return pos;
 	}
 		
-	public function setVisible(flag:Boolean) {
+	public function setVisible(flag:Boolean, zuberiFlag:Boolean) {
 		clip._visible = flag;	
+		if flag {
+			if (arguments.length == 1) { 
+				zuberiFlag = flag; 
+				Debugger.DebugText("npcStatusDisplay.setVisible(): zuberiFlag defaulted to flag (" + flag + ")", debugMode);
+			}
+			showZuberi( zuberiFlag );
+		}
 	}
 	
 	public function toggleBackground(flag:Boolean) {
@@ -219,31 +226,8 @@ class gui.theck.npcStatusDisplay
 		Tweener.addTween(clip, {_alpha : 0, delay : 2, time : decayTime});	
 	}
 	
-    //private function blinkField(field:TextField) {
-		//Debugger.DebugText("blinkText called", debugMode);
-		//
-		//// clear any existing blinking effects first
-        //clearInterval(field.blinkInterval);
-        //field.transform.colorTransform = new ColorTransform();
-		//
-		//// Set up the color transform
-        //var colorTransform:ColorTransform = field.transform.colorTransform;
-        //colorTransform.rgb = 0xFFFFFF;
-        //field.transform.colorTransform = colorTransform;
-        //var increment = 20;		
-        //field.blinkInterval = setInterval(Delegate.create(field,function(){
-            //if (colorTransform.greenOffset >= 255) increment = -20;
-            //if (colorTransform.greenOffset <= 0) increment = 20;
-            //colorTransform.greenOffset += increment;
-            //colorTransform.blueOffset += increment;
-            //field.transform.colorTransform = colorTransform;
-        //}), 50);
-    //}
-	
-    //public function stopBlinkField(field:TextField) {
-		//Debugger.DebugText("stopBlink called", debugMode);
-        //clearInterval(field.blinkInterval);
-        //field.transform.colorTransform = new ColorTransform();
-    //}
-	//
+	public function showZuberi(flag:Boolean) {
+		zuberiLetter._visible = flag;
+		zuberiStatusText._visible = flag;
+	}
 }

@@ -38,6 +38,8 @@ class com.theck.ALIA.ALIA
 	static var mei112:Number = 32301;
 	static var rose112:Number = 32299;
 	static var zuberi112:Number = 32303;
+	static var eguard112:Number = 37266;
+	static var hulk112:Number = 37266; // TODO: Replace w/ actual hulk 112
 	static var textDecayTime:Number = 10;
 	static var nowColor:Number = 0xFF0000;
 	
@@ -81,6 +83,9 @@ class com.theck.ALIA.ALIA
 	private var pct_PS3_Now:Number;
 	private var pct_FR_Now:Number;
 	private var pct_warning:DistributedValue;
+	
+	// other options
+	private var showZuberi:DistributedValue;
 
 	//////////////////////////////
 	////// Addon Management //////
@@ -91,6 +96,7 @@ class com.theck.ALIA.ALIA
 		
 		// create options (note: each is a DistributedValue, need to access w/ SetValue() / GetValue() in code
 		pct_warning = DistributedValue.Create("alia_warnpct");
+		showZuberi = DistributedValue.Create("alia_zuberi");
     }
 
 	public function Load() {
@@ -106,6 +112,7 @@ class com.theck.ALIA.ALIA
 		
 		// connect options to SettingsChanged function
 		pct_warning.SignalChanged.Connect(SettingsChanged, this);
+		showZuberi.SignalChanged.Connect(SettingsChanged, this);
 		
 		// announce settings flag
 		AnnounceSettingsBool = true;
@@ -118,6 +125,7 @@ class com.theck.ALIA.ALIA
 		ResetLurker();
 		//DisconnectTargetChangedSignal();
 		pct_warning.SignalChanged.Disconnect(SettingsChanged, this);
+		showZuberi.SignalChanged.Disconnect(SettingsChanged, this);
 	}
 	
 	public function Activate(config:Archive) {
@@ -132,7 +140,7 @@ class com.theck.ALIA.ALIA
 		
 		n_pos = config.FindEntry("alia_npcPosition", new Point(600, 400));
 		npcDisplay.setPos(n_pos);
-		
+				
 		pct_SB1_Now = 0.75;
 		pct_PS1_Now = 0.67;
 		pct_PS2_Now = 0.45;
@@ -141,6 +149,7 @@ class com.theck.ALIA.ALIA
 		
 		// set options
 		pct_warning.SetValue(config.FindEntry("pct_warning", 3));
+		showZuberi.SetValue( config.FindEntry("showZuberi", false));
 		
 		// Initialize vicinity signal and update visibility
 		Initialize();
@@ -163,6 +172,7 @@ class com.theck.ALIA.ALIA
 		
 		// save options
 		config.AddEntry("pct_warning", pct_warning.GetValue());
+		config.AddEntry("showZuberi", showZuberi.GetValue());
 		
 		return config
 	}
@@ -189,6 +199,10 @@ class com.theck.ALIA.ALIA
 		case "alia_warnpct":
 			pct_warning = dv;
 			break;
+		case "alia_zuberi":
+			showZuberi = dv;
+			npcDisplay.setVisible( IsNYR(), Boolean(showZuberi.GetValue()));
+			break;
 		}
 		AnnounceSettings();
 	}
@@ -212,7 +226,7 @@ class com.theck.ALIA.ALIA
 		warningController.setVisible( IsNYR() );
 		warningController.stopBlink();		
 		healthController.setVisible( IsNYR() ); 
-		npcDisplay.setVisible( IsNYR() ); 
+		npcDisplay.setVisible( IsNYR(), Boolean(showZuberi.GetValue()) ); 
 	}
 	
 	public function ResetAnnounceFlags() {
@@ -231,7 +245,7 @@ class com.theck.ALIA.ALIA
 	
 	public function AnnounceSettings() {
 		if ( debugMode || ( AnnounceSettingsBool && IsNYR() ) ) {
-			com.GameInterface.UtilsBase.PrintChatText("ALIA: NYR Detected. Warning setting is " + pct_warning.GetValue() + '%');
+			com.GameInterface.UtilsBase.PrintChatText("ALIA: NYR Detected. Warning setting is " + pct_warning.GetValue() + '%, Zuberi is ' + ( showZuberi.GetValue() ? "shown" : "hidden" ) + ".");
 			AnnounceSettingsBool = false; // only resets on Load() or SettingsChanged()
 		}
 		
@@ -252,7 +266,7 @@ class com.theck.ALIA.ALIA
 		// GetNameTagCategory() seems to return 5 for NPCs (hostile or friendly), but 6 for lurker (probably "boss")
 		// GetName() gives the name
 		// GetStat(112) gives the unique character ID, which is what we want to grab I guess
-		// Useful 112s:  Alex is 14242, Mei Ling is 14258, Rose is 14259, Zuberi is 14279, Eldritch Guardian (bird) is 37266
+		// Useful 112s:  Eldritch Guardian (bird) is 37266, (hulk) is ????
 		// 112s pulled from E1 intro: Alex is 32302, Mei Ling is 32301, Rose is 32299, Zuberi 32303
 		// 112s for lurker:
 		//	SM: 37265 (first spawn), 37263 (after wipe)
@@ -266,20 +280,20 @@ class com.theck.ALIA.ALIA
 		
 		var dynel:Dynel = Dynel.GetDynel(dynelId);
 		
+		DebugText("Dynel GetName(): " + dynel.GetName());
+		DebugText("Dynel Stat 112: " + dynel.GetStat(112));
 		/* Debugging stuff
-		//DebugText("Dynel GetName(): " + dynel.GetName());
-		//DebugText("Dynel Id: " + dynelId);
-		//DebugText("Dynel GetID(): " + dynel.GetID());
-		//DebugText("Dynel Interaction type: " + ProjectUtilsBase.GetInteractionType(dynelId));
-		//DebugText("Dynel m_Type: " + dynelId.m_Type);
-		//DebugText("Dynel GetType(): " + dynelId.GetType());
-		//DebugText("Dynel NameTagCategory: " + dynel.GetNametagCategory());
-		//DebugText("Dynel Stat 112: " + dynel.GetStat(112));
+		DebugText("Dynel Id: " + dynelId);
+		DebugText("Dynel GetID(): " + dynel.GetID());
+		DebugText("Dynel Interaction type: " + ProjectUtilsBase.GetInteractionType(dynelId));
+		DebugText("Dynel m_Type: " + dynelId.m_Type);
+		DebugText("Dynel GetType(): " + dynelId.GetType());
+		DebugText("Dynel NameTagCategory: " + dynel.GetNametagCategory());
 		*/
 		
 		// check for lurker first
 		if ( !lurker && dynel.GetName() == stringLurker ) {
-			DebugText("DetectNPCs(): Lurker could be locked here")
+			DebugText("DetectNPCs(): Lurker hooked")
 			
 			// store lurker variable
 			lurker = Character.GetCharacter(dynel.GetID());
@@ -292,43 +306,56 @@ class com.theck.ALIA.ALIA
 			
 			// Lock on lurker so that we don't continue to check targets anymore
 			updateHealthDisplay = true;
-			DebugText("DetectNPCs(): Lurker hooked")
 		}
 		
-		// only connect helpful NPCs if we have lurker already (avoids entrance grab)
-		else if ( lurker ) {
+		// only connect helpful NPCs if we're in combat (avoids entrance grab)
+		else if ( m_player.IsInCombat() ) {
 			if ( !alex && ( dynel.GetStat(112) == alex112 ) ) {
 				alex = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
 				alex.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
 				UpdateNPCStatusDisplay();
-				DebugText("DetectNPCs(): Alex hooked")
+				DebugText("DetectNPCs(): Alex hooked");
 			}
 			else if ( !rose && ( dynel.GetStat(112) == rose112 ) ) {			
 				rose = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
 				rose.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
 				UpdateNPCStatusDisplay();
-				DebugText("DetectNPCs(): Rose hooked")
+				DebugText("DetectNPCs(): Rose hooked");
 			}
 			else if ( !mei && ( dynel.GetStat(112) == mei112 ) ) {
 				mei = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
 				mei.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
 				UpdateNPCStatusDisplay();
-				DebugText("DetectNPCs(): Mei hooked")		
+				DebugText("DetectNPCs(): Mei hooked");
 			}
 			else if ( !zuberi && ( dynel.GetStat(112) == zuberi112 ) ) {
 				zuberi = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
 				zuberi.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
 				UpdateNPCStatusDisplay();
-				DebugText("DetectNPCs(): Zuberi hooked")		
+				DebugText("DetectNPCs(): Zuberi hooked");	
+				
+				// Zuberi ONLY shows up in P3, so we can use him as a test for phase
+				// this is only needed to help recover from a crash or /reloadui
+				if !SB1_Cast {
+					DebugText("DetectNPCs(): SB1_Cast set to true by Zuberi");	
+					SetShadow1Flag();			
+				}
 			}
+		}
+			
+		// this is only needed to help recover from a crash or /reloadui
+		// note that the guardians in story mode have a 112 of 32407, so they shouldn't trigger this
+		else if !SB1_Cast && ( dynel.GetStat(112) == eguard112 || dynel.GetStat(112) == hulk112 ) {
+			// Birds and hulks only show up in phase 2, so we can use them as a test for phase
+			// TODO: put hulk ID in here
+			DebugText("DetectNPCs(): SB1_Cast set to true by a bird or hulk");
+			SetShadow1Flag();
 		}
 		
 		// unhook this function if we have all the NPCs
 		if ( alex && rose && mei && zuberi && lurker ) { 
 			DisconnectVicinitySignals(); 
 		}
-		
-		
 	}
 	
 	public function LurkerStatChanged(stat)	{
@@ -366,7 +393,7 @@ class com.theck.ALIA.ALIA
 			/* 	
 			Everything else only happens in phase 3, so we could put the rest of this inside an "if SB_Cast {}".
 			However if someone crashes, SB1_Cast might not be true and then the addon would stop working.
-			Workaround: put the first PS inside clause  b/c it's possible to push lurker below 69% in phase 1.
+			Workaround: put the first PS inside clause  b/c it's possible to push lurker past 67% + pct_warning in phase 1.
 			*/
 			
 			// First Personal Space at 23556525 (67%)
@@ -432,7 +459,10 @@ class com.theck.ALIA.ALIA
 		// decay on every PS
 		else if (spell == stringPersonalSpace)
 		{
-			warningController.decayText(3);			
+			warningController.decayText(3);	
+			
+			// can clear the SB1 flag here too (in case of crash or /reloadui)
+			if !SB1_Cast { SB1_Cast = true; }		
 		}
 		// decay FR and stop blinking effect
 		else if (spell == stringFinalResort)
@@ -639,7 +669,7 @@ class com.theck.ALIA.ALIA
 		warningController.setVisible(IsNYR());
 		warningController.enableInteraction(false);
 		healthController.setVisible(IsNYR()); 
-		npcDisplay.setVisible(IsNYR());
+		npcDisplay.setVisible(IsNYR(), Boolean(showZuberi.GetValue()));
 		
 		//only editable in NYR
 		if IsNYR() 
