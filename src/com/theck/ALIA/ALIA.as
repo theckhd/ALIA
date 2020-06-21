@@ -39,7 +39,7 @@ class com.theck.ALIA.ALIA
 	static var rose112:Number = 32299;
 	static var zuberi112:Number = 32303;
 	static var eguard112:Number = 37266;
-	static var hulk112:Number = 37266; // TODO: Replace w/ actual hulk 112
+	static var hulk112:Number = 37333; 
 	static var textDecayTime:Number = 10;
 	static var nowColor:Number = 0xFF0000;
 	
@@ -159,6 +159,7 @@ class com.theck.ALIA.ALIA
 		
 		// Announce any relevant settings the first time Activate() is called w/in NYR
 		AnnounceSettings();
+		DebugText("SB1: is " + SB1_Cast);
 	}
 
 	public function Deactivate():Archive {
@@ -230,15 +231,29 @@ class com.theck.ALIA.ALIA
 	}
 	
 	public function ResetAnnounceFlags() {
-		Ann_SB1_Soon = true;
-		Ann_SB1_Now = true;
-		SB1_Cast = false;
-		Ann_PS1_Soon = true;
-		Ann_PS1_Now = true;
-		Ann_PS2_Soon = true;
-		Ann_PS2_Now = true;
-		Ann_PS3_Soon = true;
-		Ann_PS3_Now = true;
+		// only enable announcements if the lurker is below the threshold (crash/reloadui protection)
+		var pct = lurker.GetStat(27, 1) / lurker.GetStat(1, 1);
+		if ( pct > pct_SB1_Now ) 
+		{	
+			Ann_SB1_Soon = true;
+			Ann_SB1_Now = true;
+			SB1_Cast = false;
+		}
+		if (pct > pct_PS1_Now )
+		{
+			Ann_PS1_Soon = true;
+			Ann_PS1_Now = true;
+		}
+		if ( pct > pct_PS2_Now )
+		{
+			Ann_PS2_Soon = true;
+			Ann_PS2_Now = true;
+		}
+		if ( pct > pct_PS3_Now )
+		{
+			Ann_PS3_Soon = true;
+			Ann_PS3_Now = true;
+		}		
 		Ann_FR_Soon = true;
 		Ann_FR_Now = true;
 	}
@@ -280,9 +295,9 @@ class com.theck.ALIA.ALIA
 		
 		var dynel:Dynel = Dynel.GetDynel(dynelId);
 		
+		/* Debugging stuff
 		DebugText("Dynel GetName(): " + dynel.GetName());
 		DebugText("Dynel Stat 112: " + dynel.GetStat(112));
-		/* Debugging stuff
 		DebugText("Dynel Id: " + dynelId);
 		DebugText("Dynel GetID(): " + dynel.GetID());
 		DebugText("Dynel Interaction type: " + ProjectUtilsBase.GetInteractionType(dynelId));
@@ -340,16 +355,15 @@ class com.theck.ALIA.ALIA
 					DebugText("DetectNPCs(): SB1_Cast set to true by Zuberi");	
 					SetShadow1Flag();			
 				}
+			}			
+			// this is only needed to help recover from a crash or /reloadui
+			// note that the guardians in story mode have a 112 of 32407, so they shouldn't trigger this
+			else if !SB1_Cast && ( dynel.GetStat(112) == eguard112 || dynel.GetStat(112) == hulk112 ) {
+				// Birds and hulks only show up in phase 2, so we can use them as a test for phase
+				// TODO: put hulk ID in here
+					DebugText("DetectNPCs(): SB1_Cast set to true by a " + dynel.GetName() );
+				SetShadow1Flag();
 			}
-		}
-			
-		// this is only needed to help recover from a crash or /reloadui
-		// note that the guardians in story mode have a 112 of 32407, so they shouldn't trigger this
-		else if !SB1_Cast && ( dynel.GetStat(112) == eguard112 || dynel.GetStat(112) == hulk112 ) {
-			// Birds and hulks only show up in phase 2, so we can use them as a test for phase
-			// TODO: put hulk ID in here
-			DebugText("DetectNPCs(): SB1_Cast set to true by a bird or hulk");
-			SetShadow1Flag();
 		}
 		
 		// unhook this function if we have all the NPCs
