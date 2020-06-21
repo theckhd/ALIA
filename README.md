@@ -34,7 +34,7 @@ Currently there are three text fields that appear. The displays only appear when
     - White: Not providing buff, but no status ailments (i.e. while running back to their spot)
     - Black: NPC not yet detected (usually most of phase 1 & 2)
   - Letters are just M (Mei Ling / Melee), R (Rose / Mid-range), A (Alex / long range), and Z (Zuberi)
-    - I realize Zuberi is sort of useless, I'll probably turn off his display in a future release
+    - Zuberi is turned off by default. If you want to see what he's up to, you can enable him with `/setoption alia_zuberi true`
     
 
 The displays can be moved (click & drag) in GUIEdit mode, and save their position between sessions.
