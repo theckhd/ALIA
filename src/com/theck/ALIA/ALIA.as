@@ -9,6 +9,7 @@ import com.GameInterface.DistributedValue;
 import com.GameInterface.Game.Character;
 import com.GameInterface.Game.Dynel;
 import com.GameInterface.VicinitySystem;
+import com.GameInterface.UtilsBase;
 //import com.GameInterface.ProjectUtilsBase;
 //import com.Utils.WeakList;
 import com.Utils.ID32;
@@ -34,6 +35,7 @@ class com.theck.ALIA.ALIA
 	static var stringShadowOutOfTime:String = LDBFormat.LDBGetText(50210, 8934410); //"Shadow Out Of Time";
 	static var stringPersonalSpace:String = LDBFormat.LDBGetText(50210, 8934415); //"Personal Space";
 	static var stringFinalResort:String = LDBFormat.LDBGetText(50210, 7963851); //"Final Resort";
+	static var stringFromBeneath:String = LDBFormat.LDBGetText(50210, 8934432); //"From Beneath You, It Devours"
 	static var alex112:Number = 32302;
 	static var mei112:Number = 32301;
 	static var rose112:Number = 32299;
@@ -75,6 +77,8 @@ class com.theck.ALIA.ALIA
 	private var Ann_FR_Soon:Boolean;
 	private var Ann_FR_Now:Boolean;
 	private var AnnounceSettingsBool:Boolean;
+	private var personalSoundAlreadyPlaying:Boolean = false;
+	private var fromBeneathSoundAlreadyPlaying:Boolean = false;
 	
 	// percentages
 	private var pct_SB1_Now:Number;
@@ -86,6 +90,8 @@ class com.theck.ALIA.ALIA
 	
 	// other options
 	private var showZuberi:DistributedValue;
+	private var personalSound:DistributedValue;
+	private var fromBeneathSound:DistributedValue;
 
 	//////////////////////////////
 	////// Addon Management //////
@@ -95,8 +101,11 @@ class com.theck.ALIA.ALIA
         m_swfRoot = swfRoot;
 		
 		// create options (note: each is a DistributedValue, need to access w/ SetValue() / GetValue() in code
+		// the argument here is the string used to adjust the variable via chat window
 		pct_warning = DistributedValue.Create("alia_warnpct");
 		showZuberi = DistributedValue.Create("alia_zuberi");
+		personalSound = DistributedValue.Create("alia_ps_sound");
+		fromBeneathSound = DistributedValue.Create("alia_pod_sound");
     }
 
 	public function Load() {
@@ -113,6 +122,8 @@ class com.theck.ALIA.ALIA
 		// connect options to SettingsChanged function
 		pct_warning.SignalChanged.Connect(SettingsChanged, this);
 		showZuberi.SignalChanged.Connect(SettingsChanged, this);
+		personalSound.SignalChanged.Connect(SettingsChanged, this);
+		fromBeneathSound.SignalChanged.Connect(SettingsChanged, this);
 		
 		// announce settings flag
 		AnnounceSettingsBool = true;
@@ -126,6 +137,8 @@ class com.theck.ALIA.ALIA
 		//DisconnectTargetChangedSignal();
 		pct_warning.SignalChanged.Disconnect(SettingsChanged, this);
 		showZuberi.SignalChanged.Disconnect(SettingsChanged, this);
+		personalSound.SignalChanged.Disconnect(SettingsChanged, this);
+		fromBeneathSound.SignalChanged.Disconnect(SettingsChanged, this);
 	}
 	
 	public function Activate(config:Archive) {
@@ -148,8 +161,11 @@ class com.theck.ALIA.ALIA
 		pct_FR_Now  = 0.025;
 		
 		// set options
+		// the arguments here are the names of the settings within Config (not the slash command strings)
 		pct_warning.SetValue(config.FindEntry("pct_warning", 3));
 		showZuberi.SetValue( config.FindEntry("showZuberi", false));
+		personalSound.SetValue( config.FindEntry("alia_personalSound", true));
+		fromBeneathSound.SetValue( config.FindEntry("alia_fromBeneathSound", true));
 		
 		// Initialize vicinity signal and update visibility
 		Initialize();
@@ -172,8 +188,11 @@ class com.theck.ALIA.ALIA
 		config.AddEntry("alia_npcPosition", n_pos);
 		
 		// save options
+		// the arguments here are the names of the settings within Config (not the slash command strings)
 		config.AddEntry("pct_warning", pct_warning.GetValue());
 		config.AddEntry("showZuberi", showZuberi.GetValue());
+		config.AddEntry("alia_personalSound", personalSound.GetValue());
+		config.AddEntry("alia_fromBeneathSound", fromBeneathSound.GetValue());
 		
 		return config
 	}
@@ -196,6 +215,7 @@ class com.theck.ALIA.ALIA
 		
 		AnnounceSettingsBool = true;
 		
+		// switch off of the settings name (defined in ALIA constructor)
 		switch (dv.GetName()) {
 		case "alia_warnpct":
 			pct_warning = dv;
@@ -204,8 +224,17 @@ class com.theck.ALIA.ALIA
 			showZuberi = dv;
 			npcDisplay.setVisible( IsNYR(), Boolean(showZuberi.GetValue()));
 			break;
+		case "alia_ps_sound":
+			personalSound = dv;
+			if personalSound.GetValue() { PlayPersonalSpaceWarningSound(); };
+			break;
+		case "alia_pod_sound":
+			fromBeneathSound = dv;
+			if fromBeneathSound.GetValue() { PlayFromBeneathWarningSound(); };
+			break;
 		}
-		AnnounceSettings();
+		
+		AnnounceSettings(true);
 	}
 		
 	public function Initialize() {	
@@ -258,9 +287,9 @@ class com.theck.ALIA.ALIA
 		Ann_FR_Now = true;
 	}
 	
-	public function AnnounceSettings() {
-		if ( debugMode || ( AnnounceSettingsBool && IsNYR() ) ) {
-			com.GameInterface.UtilsBase.PrintChatText("ALIA: NYR Detected. Warning setting is " + pct_warning.GetValue() + '%, Zuberi is ' + ( showZuberi.GetValue() ? "shown" : "hidden" ) + ".");
+	public function AnnounceSettings(override:Boolean) {
+		if ( debugMode || override || ( AnnounceSettingsBool && IsNYR() ) )  {
+			com.GameInterface.UtilsBase.PrintChatText("ALIA:" + ( IsNYR() ? " NYR Detected." : "" ) + " Warning setting is " + pct_warning.GetValue() + '%, Zuberi is ' + ( showZuberi.GetValue() ? "shown" : "hidden" ) + ". Audible alert for Personal Space " + ( personalSound.GetValue() ? "enabled" : "disabled" ) + ". Audible alert for Pod cast " + ( fromBeneathSound.GetValue() ? "enabled" : "disabled" ) + "." );
 			AnnounceSettingsBool = false; // only resets on Load() or SettingsChanged()
 		}
 		
@@ -474,6 +503,7 @@ class com.theck.ALIA.ALIA
 		else if (spell == stringPersonalSpace)
 		{
 			warningController.decayText(3);	
+			if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
 			
 			// can clear the SB1 flag here too (in case of crash or /reloadui)
 			if !SB1_Cast { SB1_Cast = true; }		
@@ -484,7 +514,13 @@ class com.theck.ALIA.ALIA
 			warningController.decayText(3);
 			warningController.stopBlink();
 			warningController.setTextColor(nowColor);
-		}		
+			if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
+		}
+		else if (spell == stringFromBeneath )
+		{
+			if (Boolean(fromBeneathSound.GetValue())) { PlayFromBeneathWarningSound(); }
+			//UtilsBase.PlaySound(soundName); // need soundName:String here
+		}
 	}
 	
 	private function SetShadow1Flag() {
@@ -570,6 +606,58 @@ class com.theck.ALIA.ALIA
 		m_player.SignalOffensiveTargetChanged.Disconnect(DetectNPCs, this);
 		m_player.SignalDefensiveTargetChanged.Disconnect(DetectNPCs, this);
 		
+	}
+	
+	///////////////////////
+	//////  Sounds  ///////
+	///////////////////////
+	
+	public function PlayPersonalSpaceWarningSound() {
+		// breaking target and retargeting the boss seems to somehow call the LurkerCasting function a second time,
+		// so we have to throttle the sound playing
+		if ( !personalSoundAlreadyPlaying ) {
+			// throttle sound 
+			personalSoundAlreadyPlaying = true;
+			// create beep pattern
+			for ( var i:Number = 0; i < 10; i ++ )
+			{
+				setTimeout(Delegate.create(this, PlaySingleBeep), i*450);
+			}
+			// unthrottle after 5 seconds
+			setTimeout(Delegate.create(this, ResetPersonalSpaceWarningSoundFlag), 5000 );
+		}		
+	}
+	
+	public function ResetPersonalSpaceWarningSoundFlag() {
+		personalSoundAlreadyPlaying = false;
+	}
+	
+	public function PlayFromBeneathWarningSound() {
+		// breaking target and retargeting the boss seems to somehow call the LurkerCasting function a second time,
+		// so we have to throttle the sound playing
+		if ( !fromBeneathSoundAlreadyPlaying ) {
+			// throttle sound 
+			fromBeneathSoundAlreadyPlaying = true;
+			// create beep pattern
+			for ( var i:Number = 0; i < 4; i ++ )
+			{
+				setTimeout(Delegate.create(this, PlaySingleMobilePositive), i*900);
+			}
+			// unthrottle after 5 seconds
+			setTimeout(Delegate.create(this, ResetFromBeneathWarningSoundFlag), 5000 );
+		}
+	}
+	
+	public function ResetFromBeneathWarningSoundFlag() {
+		fromBeneathSoundAlreadyPlaying = false;
+	}
+	
+	public function PlaySingleBeep() {
+		com.GameInterface.Game.Character.GetClientCharacter().AddEffectPackage("sound_fxpackage_beep_single.xml");
+	}
+	
+	public function PlaySingleMobilePositive() {
+		com.GameInterface.Game.Character.GetClientCharacter().AddEffectPackage("sound_fx_package_mobile_positive_feedback.xml");
 	}
 	
 	///////////////////////
@@ -706,6 +794,8 @@ class com.theck.ALIA.ALIA
 				npcDisplay.setGUIEdit(true);
 				npcDisplay.clip.onPress = Delegate.create(this, npcStartDrag);
 				npcDisplay.clip.onRelease = Delegate.create(this, npcStopDrag);
+				
+				if (debugMode && Boolean(fromBeneathSound.GetValue())) { PlayFromBeneathWarningSound(); }
 			} 
 			else {
 				DebugText("GuiEdit: state false");
@@ -726,6 +816,8 @@ class com.theck.ALIA.ALIA
 				npcDisplay.clip.onPress = undefined;
 				npcDisplay.clip.onRelease = undefined;
 				npcDisplay.setGUIEdit(false);
+				
+				if (debugMode  && Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
 			}
 		}
     }
