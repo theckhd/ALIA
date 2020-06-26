@@ -9,7 +9,7 @@ import com.GameInterface.DistributedValue;
 import com.GameInterface.Game.Character;
 import com.GameInterface.Game.Dynel;
 import com.GameInterface.VicinitySystem;
-import com.GameInterface.UtilsBase;
+//import com.GameInterface.UtilsBase;
 //import com.GameInterface.ProjectUtilsBase;
 //import com.Utils.WeakList;
 import com.Utils.ID32;
@@ -79,6 +79,7 @@ class com.theck.ALIA.ALIA
 	private var AnnounceSettingsBool:Boolean;
 	private var personalSoundAlreadyPlaying:Boolean = false;
 	private var fromBeneathSoundAlreadyPlaying:Boolean = false;
+	private var loadFinished = false;
 	
 	// percentages
 	private var pct_SB1_Now:Number;
@@ -92,6 +93,7 @@ class com.theck.ALIA.ALIA
 	private var showZuberi:DistributedValue;
 	private var personalSound:DistributedValue;
 	private var fromBeneathSound:DistributedValue;
+	private var showSlashCommands:DistributedValue;
 
 	//////////////////////////////
 	////// Addon Management //////
@@ -100,12 +102,13 @@ class com.theck.ALIA.ALIA
 	public function ALIA(swfRoot:MovieClip) {
         m_swfRoot = swfRoot;
 		
-		// create options (note: each is a DistributedValue, need to access w/ SetValue() / GetValue() in code
-		// the argument here is the string used to adjust the variable via chat window
-		pct_warning = DistributedValue.Create("alia_warnpct");
+		// create options
+		CreateOptions();
+
+/*		pct_warning = DistributedValue.Create("alia_warnpct");
 		showZuberi = DistributedValue.Create("alia_zuberi");
 		personalSound = DistributedValue.Create("alia_ps_sound");
-		fromBeneathSound = DistributedValue.Create("alia_pod_sound");
+		fromBeneathSound = DistributedValue.Create("alia_pod_sound");*/
     }
 
 	public function Load() {
@@ -120,13 +123,15 @@ class com.theck.ALIA.ALIA
 		GlobalSignal.SignalSetGUIEditMode.Connect(GuiEdit, this);
 		
 		// connect options to SettingsChanged function
-		pct_warning.SignalChanged.Connect(SettingsChanged, this);
+		ConnetOptionsSignals();
+/*		pct_warning.SignalChanged.Connect(SettingsChanged, this);
 		showZuberi.SignalChanged.Connect(SettingsChanged, this);
 		personalSound.SignalChanged.Connect(SettingsChanged, this);
-		fromBeneathSound.SignalChanged.Connect(SettingsChanged, this);
+		fromBeneathSound.SignalChanged.Connect(SettingsChanged, this);*/
 		
 		// announce settings flag
 		AnnounceSettingsBool = true;
+		setTimeout(Delegate.create(this, setLoadFinishedFlag), 5000);
 	}
 
 	public function Unload() {		
@@ -134,17 +139,18 @@ class com.theck.ALIA.ALIA
 		
 		// disconnect all signals
 		ResetLurker();
-		//DisconnectTargetChangedSignal();
-		pct_warning.SignalChanged.Disconnect(SettingsChanged, this);
+		
+		DisconnetOptionsSignals();
+/*		pct_warning.SignalChanged.Disconnect(SettingsChanged, this);
 		showZuberi.SignalChanged.Disconnect(SettingsChanged, this);
 		personalSound.SignalChanged.Disconnect(SettingsChanged, this);
-		fromBeneathSound.SignalChanged.Disconnect(SettingsChanged, this);
+		fromBeneathSound.SignalChanged.Disconnect(SettingsChanged, this);*/
 	}
 	
 	public function Activate(config:Archive) {
 		DebugText("Activate()");
 		
-		// Move text to desired position
+/*		// Move text to desired position
 		w_pos = config.FindEntry("alia_warnPosition", new Point(600, 600));		
 		warningController.setPos(w_pos);
 		
@@ -152,7 +158,7 @@ class com.theck.ALIA.ALIA
 		healthController.setPos(h_pos);
 		
 		n_pos = config.FindEntry("alia_npcPosition", new Point(600, 400));
-		npcDisplay.setPos(n_pos);
+		npcDisplay.setPos(n_pos);*/
 				
 		pct_SB1_Now = 0.75;
 		pct_PS1_Now = 0.67;
@@ -160,20 +166,20 @@ class com.theck.ALIA.ALIA
 		pct_PS3_Now = 0.25;
 		pct_FR_Now  = 0.025;
 		
-		// set options
+/*		// set options
 		// the arguments here are the names of the settings within Config (not the slash command strings)
-		pct_warning.SetValue(config.FindEntry("pct_warning", 3));
-		showZuberi.SetValue( config.FindEntry("showZuberi", false));
+		pct_warning.SetValue(config.FindEntry("alia_pct_warning", 3));
+		showZuberi.SetValue( config.FindEntry("alia_showZuberi", false));
 		personalSound.SetValue( config.FindEntry("alia_personalSound", true));
-		fromBeneathSound.SetValue( config.FindEntry("alia_fromBeneathSound", true));
+		fromBeneathSound.SetValue( config.FindEntry("alia_fromBeneathSound", true));*/
+		
+		// set options
+		ActivateOptions(config);
 		
 		// Initialize vicinity signal and update visibility
 		Initialize();
 		
-		// This seems to crash client during loading screens
-		//kickstart(); // grab NPCs that already exist
-		
-		// Announce any relevant settings the first time Activate() is called w/in NYR
+		// Announce any relevant settings the first time Activate() is called within NYR
 		AnnounceSettings();
 		DebugText("SB1: is " + SB1_Cast);
 	}
@@ -183,16 +189,17 @@ class com.theck.ALIA.ALIA
 		
 		// save the current position in the config
 		var config = new Archive();
-		config.AddEntry("alia_warnPosition", w_pos);
+/*		config.AddEntry("alia_warnPosition", w_pos);
 		config.AddEntry("alia_healthPosition", h_pos);
 		config.AddEntry("alia_npcPosition", n_pos);
 		
 		// save options
 		// the arguments here are the names of the settings within Config (not the slash command strings)
-		config.AddEntry("pct_warning", pct_warning.GetValue());
-		config.AddEntry("showZuberi", showZuberi.GetValue());
+		config.AddEntry("alia_pct_warning", pct_warning.GetValue());
+		config.AddEntry("alia_showZuberi", showZuberi.GetValue());
 		config.AddEntry("alia_personalSound", personalSound.GetValue());
-		config.AddEntry("alia_fromBeneathSound", fromBeneathSound.GetValue());
+		config.AddEntry("alia_fromBeneathSound", fromBeneathSound.GetValue());*/
+		config = DeactivateOptions();
 		
 		return config
 	}
@@ -207,34 +214,8 @@ class com.theck.ALIA.ALIA
 		return (debugMode || IsNYR10() || zone == 5710); // SM, E1, and E5 are all 5710
 	}
 	
-	private function SettingsChanged(dv:DistributedValue) {
-		
-		DebugText("SettingsChanged()");
-        DebugText("SettingsChanged: dv.GetName() is " + dv.GetName());
-        DebugText("SettingsChanged: dv.GetValue() is " + dv.GetValue());
-		
-		AnnounceSettingsBool = true;
-		
-		// switch off of the settings name (defined in ALIA constructor)
-		switch (dv.GetName()) {
-		case "alia_warnpct":
-			pct_warning = dv;
-			break;
-		case "alia_zuberi":
-			showZuberi = dv;
-			npcDisplay.setVisible( IsNYR(), Boolean(showZuberi.GetValue()));
-			break;
-		case "alia_ps_sound":
-			personalSound = dv;
-			if personalSound.GetValue() { PlayPersonalSpaceWarningSound(); };
-			break;
-		case "alia_pod_sound":
-			fromBeneathSound = dv;
-			if fromBeneathSound.GetValue() { PlayFromBeneathWarningSound(); };
-			break;
-		}
-		
-		AnnounceSettings(true);
+	private function setLoadFinishedFlag() {
+		loadFinished = true;
 	}
 		
 	public function Initialize() {	
@@ -258,6 +239,131 @@ class com.theck.ALIA.ALIA
 		healthController.setVisible( IsNYR() ); 
 		npcDisplay.setVisible( IsNYR(), Boolean(showZuberi.GetValue()) ); 
 	}
+	
+	//////////////////////////////
+	////// Options Handling //////
+	//////////////////////////////
+	
+	private function CreateOptions() {		
+		// create options (note: each is a DistributedValue, need to access w/ SetValue() / GetValue() in code
+		// the argument here is the string used to adjust the variable via chat window
+		pct_warning = DistributedValue.Create("alia_warnpct");
+		showZuberi = DistributedValue.Create("alia_zuberi");
+		personalSound = DistributedValue.Create("alia_ps_sound");
+		fromBeneathSound = DistributedValue.Create("alia_pod_sound");
+		showSlashCommands = DistributedValue.Create("alia_options");
+	}
+	
+	private function ConnetOptionsSignals() {
+		// connect option change signals to SettingsChanged
+		pct_warning.SignalChanged.Connect(SettingsChanged, this);
+		showZuberi.SignalChanged.Connect(SettingsChanged, this);
+		personalSound.SignalChanged.Connect(SettingsChanged, this);
+		fromBeneathSound.SignalChanged.Connect(SettingsChanged, this);
+		showSlashCommands.SignalChanged.Connect(AnnounceSlashCommands, this);
+	}
+	
+	private function DisconnetOptionsSignals() {
+		// disconnect option change signals 	
+		pct_warning.SignalChanged.Disconnect(SettingsChanged, this);
+		showZuberi.SignalChanged.Disconnect(SettingsChanged, this);
+		personalSound.SignalChanged.Disconnect(SettingsChanged, this);
+		fromBeneathSound.SignalChanged.Disconnect(SettingsChanged, this);
+		showSlashCommands.SignalChanged.Disconnect(AnnounceSlashCommands, this);
+	}
+	
+	private function ActivateOptions(config:Archive) {
+		
+		// Move text to desired position
+		w_pos = config.FindEntry("alia_warnPosition", new Point(600, 600));		
+		warningController.setPos(w_pos);
+		
+		h_pos = config.FindEntry("alia_healthPosition", new Point(600, 500));
+		healthController.setPos(h_pos);
+		
+		n_pos = config.FindEntry("alia_npcPosition", new Point(600, 400));
+		npcDisplay.setPos(n_pos);
+		
+		// set options
+		// the arguments here are the names of the settings within Config (not the slash command strings)
+		pct_warning.SetValue(config.FindEntry("alia_pct_warning", 3));
+		showZuberi.SetValue( config.FindEntry("alia_showZuberi", false));
+		personalSound.SetValue( config.FindEntry("alia_personalSound", true));
+		fromBeneathSound.SetValue( config.FindEntry("alia_fromBeneathSound", true));
+		showSlashCommands.SetValue( false );
+	}
+	
+	private function DeactivateOptions():Archive {
+		
+		// save the current position in the config
+		var config = new Archive();
+		config.AddEntry("alia_warnPosition", w_pos);
+		config.AddEntry("alia_healthPosition", h_pos);
+		config.AddEntry("alia_npcPosition", n_pos);
+		
+		// save options
+		// the arguments here are the names of the settings within Config (not the slash command strings)
+		config.AddEntry("alia_pct_warning", pct_warning.GetValue());
+		config.AddEntry("alia_showZuberi", showZuberi.GetValue());
+		config.AddEntry("alia_personalSound", personalSound.GetValue());
+		config.AddEntry("alia_fromBeneathSound", fromBeneathSound.GetValue());
+		
+		return config
+	}
+	
+	
+	private function SettingsChanged(dv:DistributedValue) {
+		
+		DebugText("SettingsChanged()");
+        DebugText("SettingsChanged: dv.GetName() is " + dv.GetName());
+        DebugText("SettingsChanged: dv.GetValue() is " + dv.GetValue());
+		
+		AnnounceSettingsBool = true;
+		
+		// switch off of the settings name (defined in ALIA constructor)
+		switch (dv.GetName()) {
+		case "alia_warnpct":
+			pct_warning = dv;
+			break;
+		case "alia_zuberi":
+			showZuberi = dv;
+			npcDisplay.setVisible( IsNYR(), Boolean(showZuberi.GetValue()));
+			break;
+		case "alia_ps_sound":
+			personalSound = dv;
+			if (loadFinished && personalSound.GetValue() ) { PlayPersonalSpaceWarningSound(); };
+			break;
+		case "alia_pod_sound":
+			fromBeneathSound = dv;
+			if ( loadFinished && fromBeneathSound.GetValue() ) { PlayFromBeneathWarningSound(); };
+			break;
+		}
+		
+		AnnounceSettings(loadFinished);
+	}
+	
+	public function AnnounceSettings(override:Boolean) {
+		if ( debugMode || override || ( AnnounceSettingsBool && IsNYR() ) )  {
+			com.GameInterface.UtilsBase.PrintChatText("ALIA:" + ( IsNYR() ? " NYR Detected." : "" ) + " Warning setting is " + pct_warning.GetValue() + '%, Zuberi is ' + ( showZuberi.GetValue() ? "shown" : "hidden" ) + ". Sound alert for Personal Space " + ( personalSound.GetValue() ? "enabled" : "disabled" ) + ". Sound alert for Pod cast " + ( fromBeneathSound.GetValue() ? "enabled" : "disabled" ) + "." );
+			com.GameInterface.UtilsBase.PrintChatText("ALIA: Type \"/option alia_options true\" to see slash commands.");
+			AnnounceSettingsBool = false; // only resets on Load() or SettingsChanged()
+		}
+		
+	}
+	
+	public function AnnounceSlashCommands(dv:DistributedValue):Void {
+		if dv.GetValue() {
+			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_warnpct #\" will change the warning threshold to #%.");
+			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_zuberi (true/false)\" will toggle Zuberi display.");
+			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_ps_sound (true/false)\" will enable Personal Space warning sound.");
+			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_pod_sound (true/false)\" will enable From Beneath You It Devours warning sound.");
+		}
+		dv.SetValue(false);
+	}
+	
+	/////////////////////////////
+	////// Encounter Logic //////
+	/////////////////////////////
 	
 	public function ResetAnnounceFlags() {
 		// only enable announcements if the lurker is below the threshold (crash/reloadui protection)
@@ -287,18 +393,6 @@ class com.theck.ALIA.ALIA
 		Ann_FR_Now = true;
 	}
 	
-	public function AnnounceSettings(override:Boolean) {
-		if ( debugMode || override || ( AnnounceSettingsBool && IsNYR() ) )  {
-			com.GameInterface.UtilsBase.PrintChatText("ALIA:" + ( IsNYR() ? " NYR Detected." : "" ) + " Warning setting is " + pct_warning.GetValue() + '%, Zuberi is ' + ( showZuberi.GetValue() ? "shown" : "hidden" ) + ". Audible alert for Personal Space " + ( personalSound.GetValue() ? "enabled" : "disabled" ) + ". Audible alert for Pod cast " + ( fromBeneathSound.GetValue() ? "enabled" : "disabled" ) + "." );
-			AnnounceSettingsBool = false; // only resets on Load() or SettingsChanged()
-		}
-		
-	}
-	
-	/////////////////////////////
-	////// Encounter Logic //////
-	/////////////////////////////
-
 	public function setPercentHealthFlag() { updateHealthDisplay = true; }
 	
 	public function DetectNPCs(dynelId:ID32):Void {
@@ -448,6 +542,7 @@ class com.theck.ALIA.ALIA
 			else if ( Ann_PS1_Now && SB1_Cast && IsNYR10() && pct < pct_PS1_Now ) 
 			{
 				UpdateWarningWithBlink("Personal Space Now! (67%)"); 
+				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
 				Ann_PS1_Now = false;
 			}
 			
@@ -460,6 +555,7 @@ class com.theck.ALIA.ALIA
 			else if ( Ann_PS2_Now && IsNYR10() && pct < pct_PS2_Now ) 
 			{
 				UpdateWarningWithBlink("Personal Space Now! (45%)"); 
+				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
 				Ann_PS2_Now = false;
 			}
 			
@@ -472,6 +568,7 @@ class com.theck.ALIA.ALIA
 			else if (Ann_PS3_Now && IsNYR10() && pct < pct_PS3_Now ) 
 			{
 				UpdateWarningWithBlink("Personal Space 3 Now! (25%)");
+				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
 				Ann_PS3_Now = false;
 			}
 				
@@ -484,6 +581,7 @@ class com.theck.ALIA.ALIA
 			else if (Ann_FR_Now && pct < pct_FR_Now ) 
 			{
 				UpdateWarningWithBlink("Final Resort Now! (3%)"); 
+				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
 				Ann_FR_Now = false;			
 			}
 		}
@@ -502,9 +600,7 @@ class com.theck.ALIA.ALIA
 		// decay on every PS
 		else if (spell == stringPersonalSpace)
 		{
-			warningController.decayText(3);	
-			if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
-			
+			warningController.decayText(3);				
 			// can clear the SB1 flag here too (in case of crash or /reloadui)
 			if !SB1_Cast { SB1_Cast = true; }		
 		}
@@ -514,12 +610,11 @@ class com.theck.ALIA.ALIA
 			warningController.decayText(3);
 			warningController.stopBlink();
 			warningController.setTextColor(nowColor);
-			if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
 		}
+		// play a warning sound for pod casts (audible cue for cleansers)
 		else if (spell == stringFromBeneath )
 		{
 			if (Boolean(fromBeneathSound.GetValue())) { PlayFromBeneathWarningSound(); }
-			//UtilsBase.PlaySound(soundName); // need soundName:String here
 		}
 	}
 	
@@ -795,7 +890,7 @@ class com.theck.ALIA.ALIA
 				npcDisplay.clip.onPress = Delegate.create(this, npcStartDrag);
 				npcDisplay.clip.onRelease = Delegate.create(this, npcStopDrag);
 				
-				if (debugMode && Boolean(fromBeneathSound.GetValue())) { PlayFromBeneathWarningSound(); }
+				//if (debugMode && Boolean(fromBeneathSound.GetValue())) { PlayFromBeneathWarningSound(); }
 			} 
 			else {
 				DebugText("GuiEdit: state false");
@@ -817,7 +912,7 @@ class com.theck.ALIA.ALIA
 				npcDisplay.clip.onRelease = undefined;
 				npcDisplay.setGUIEdit(false);
 				
-				if (debugMode  && Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
+				//if (debugMode  && Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
 			}
 		}
     }
