@@ -1,7 +1,15 @@
 # A Lurker Is Announced (ALIA)
 This Secret World Legends addon provides announcements for important events in the Manhattan Exclusion Zone.
 
-Currently there are three text fields that appear. The displays only appear when in the Manhattan Exclusion Zone, the addon basically goes to sleep outside of that zone.
+## Audible Warnings
+
+There are two audible warnings, each of which is a short sequence of beeps. They play when:
+- Every time the lurker crosses a Personal Space threshold to warn of the impending cast (E10 only)
+- When the lurker casts From Beneath You It Devours (pod), mostly so cleansers in E10 know to cast Cleanup.
+
+## Displays
+
+Currently there are three displays that appear. The displays only appear when in the Manhattan Exclusion Zone, the addon basically goes to sleep outside of that zone.
 
 
 ![Screenshot of addon during encounter](screens/alia_npcs_health_2.png) ![Screenshot of addon during encounter](screens/alia_warning.png)
@@ -36,11 +44,13 @@ Currently there are three text fields that appear. The displays only appear when
   - Letters are just M (Mei Ling / Melee), R (Rose / Mid-range), A (Alex / long range), and Z (Zuberi)
     - Zuberi is turned off by default. If you want to see what he's up to, you can enable him with 
       - `/setoption alia_zuberi true`
-    
+
 
 The displays can be moved (click & drag) in GUIEdit mode, and save their position between sessions.
 
 ![Screenshot in GUIEdit Mode](screens/alia_guiedit.png)
+
+## Installation
 
 To install the addon, download the zip file of the [latest release](https://github.com/theckhd/ALIA/releases) (i.e. ALIA-v0.x.zip), and extract it to your game's "\Secret World Legends\Data\Gui\Custom\Flash\" folder.
 
