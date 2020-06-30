@@ -173,6 +173,11 @@ class gui.theck.npcStatusDisplay
 	}
 	
 	public function setPos(pos:Point) {
+		// sanitize inputs - this fixes a bug where someone changes screen resolution and suddenly the field is off the visible screen
+		if pos.x > Stage.width { pos.x = Stage.width / 2; }
+		if pos.y > Stage.height { pos.y = Stage.height / 2; }
+		
+		// set position
 		clip._x = pos.x;
 		clip._y = pos.y;
 	}

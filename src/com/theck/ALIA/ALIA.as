@@ -783,7 +783,7 @@ class com.theck.ALIA.ALIA
 		// Set default text
         warningController.UpdateText("A Lurker Is Announced");
 		warningController.decayText(textDecayTime);
-		healthController.UpdateText("100%")
+		healthController.UpdateText("100%");
 		
 		// Call a GuiEdit to update visibility and such
         GuiEdit();
