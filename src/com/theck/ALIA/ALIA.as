@@ -104,11 +104,6 @@ class com.theck.ALIA.ALIA
 		
 		// create options
 		CreateOptions();
-
-/*		pct_warning = DistributedValue.Create("alia_warnpct");
-		showZuberi = DistributedValue.Create("alia_zuberi");
-		personalSound = DistributedValue.Create("alia_ps_sound");
-		fromBeneathSound = DistributedValue.Create("alia_pod_sound");*/
     }
 
 	public function Load() {
@@ -124,10 +119,6 @@ class com.theck.ALIA.ALIA
 		
 		// connect options to SettingsChanged function
 		ConnetOptionsSignals();
-/*		pct_warning.SignalChanged.Connect(SettingsChanged, this);
-		showZuberi.SignalChanged.Connect(SettingsChanged, this);
-		personalSound.SignalChanged.Connect(SettingsChanged, this);
-		fromBeneathSound.SignalChanged.Connect(SettingsChanged, this);*/
 		
 		// announce settings flag
 		AnnounceSettingsBool = true;
@@ -149,30 +140,13 @@ class com.theck.ALIA.ALIA
 	
 	public function Activate(config:Archive) {
 		DebugText("Activate()");
-		
-/*		// Move text to desired position
-		w_pos = config.FindEntry("alia_warnPosition", new Point(600, 600));		
-		warningController.setPos(w_pos);
-		
-		h_pos = config.FindEntry("alia_healthPosition", new Point(600, 500));
-		healthController.setPos(h_pos);
-		
-		n_pos = config.FindEntry("alia_npcPosition", new Point(600, 400));
-		npcDisplay.setPos(n_pos);*/
 				
 		pct_SB1_Now = 0.75;
 		pct_PS1_Now = 0.67;
 		pct_PS2_Now = 0.45;
 		pct_PS3_Now = 0.25;
 		pct_FR_Now  = 0.025;
-		
-/*		// set options
-		// the arguments here are the names of the settings within Config (not the slash command strings)
-		pct_warning.SetValue(config.FindEntry("alia_pct_warning", 3));
-		showZuberi.SetValue( config.FindEntry("alia_showZuberi", false));
-		personalSound.SetValue( config.FindEntry("alia_personalSound", true));
-		fromBeneathSound.SetValue( config.FindEntry("alia_fromBeneathSound", true));*/
-		
+				
 		// set options
 		ActivateOptions(config);
 		
@@ -189,16 +163,7 @@ class com.theck.ALIA.ALIA
 		
 		// save the current position in the config
 		var config = new Archive();
-/*		config.AddEntry("alia_warnPosition", w_pos);
-		config.AddEntry("alia_healthPosition", h_pos);
-		config.AddEntry("alia_npcPosition", n_pos);
 		
-		// save options
-		// the arguments here are the names of the settings within Config (not the slash command strings)
-		config.AddEntry("alia_pct_warning", pct_warning.GetValue());
-		config.AddEntry("alia_showZuberi", showZuberi.GetValue());
-		config.AddEntry("alia_personalSound", personalSound.GetValue());
-		config.AddEntry("alia_fromBeneathSound", fromBeneathSound.GetValue());*/
 		config = DeactivateOptions();
 		
 		return config
@@ -506,9 +471,8 @@ class com.theck.ALIA.ALIA
 			var pct = currentHP / maxHP;
 			
 			// throttle display updates to every 250 ms
-			if (updateHealthDisplay) {
+			if (updateHealthDisplay && !isNaN(pct) ) {
 			
-				// pick one of these two
 				healthController.UpdateText( Math.round(pct * 1000) / 10 + "%");
 				
 				updateHealthDisplay = false;
