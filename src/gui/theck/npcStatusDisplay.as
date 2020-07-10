@@ -151,18 +151,12 @@ class gui.theck.npcStatusDisplay
 	private function UpdateLetter(field:TextField, status:Number) {
 		//Debugger.DebugText("UpdateLetter()", debugMode);
 		
-		// sanitize input (sometimes npcs - alex in particular - aren't yet detected when this is called)
-		//if ( status == undefined ) { status = 0 };
-		
 		// set text color according to status
 		field.textColor = statusColors[status];		
 	}
 	
 	private function UpdateStatusText(field:TextField, status:Number) {
 		//Debugger.DebugText("UpdateLetter()", debugMode);
-		
-		// sanitize input (sometimes npcs - alex in particular - aren't yet detected when this is called)
-		//if ( status == undefined ) { status = 0 };
 		
 		// set text color according to status
 		field.textColor = statusColors[status];

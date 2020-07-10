@@ -3,9 +3,9 @@
 * @author theck
 */
 
-//import com.GameInterface.CharacterCreation.CharacterCreation;
 import com.GameInterface.DistributedValue;
-//import com.GameInterface.DistributedValueBase;
+import com.theck.ALIA.GetHealthPercent;
+import com.theck.ALIA.LurkerCasting;
 import com.GameInterface.Game.Character;
 import com.GameInterface.Game.Dynel;
 import com.GameInterface.VicinitySystem;
@@ -52,6 +52,8 @@ class com.theck.ALIA.ALIA
 	private var rose:npcStatusMonitor;
 	private var mei:npcStatusMonitor;
 	private var zuberi:npcStatusMonitor;
+	private var currentBird:Character;
+	private var currentHulk:Character;
 	
 	// GUI stuff
 	private var m_swfRoot:MovieClip;
@@ -64,10 +66,9 @@ class com.theck.ALIA.ALIA
 	private var updateHealthDisplay:Boolean;
 	private var npcDisplay:npcStatusDisplay;
 	
-	// logic flags
+	// logic flags and accumulators
 	private var Ann_SB1_Soon:Boolean;
-	private var Ann_SB1_Now:Boolean;;
-	private var SB1_Cast:Boolean;
+	private var Ann_SB1_Now:Boolean;
 	private var Ann_PS1_Soon:Boolean;
 	private var Ann_PS1_Now:Boolean;
 	private var Ann_PS2_Soon:Boolean;
@@ -80,13 +81,19 @@ class com.theck.ALIA.ALIA
 	private var personalSoundAlreadyPlaying:Boolean = false;
 	private var fromBeneathSoundAlreadyPlaying:Boolean = false;
 	private var loadFinished = false;
+	private var encounterPhase:Number;
+	private var numBirds:Number;
+	private var numHulks:Number;
+	private var numShadows:Number;
+	private var shadowThrottleFlag:Boolean = true;
+	
 	
 	// percentages
-	private var pct_SB1_Now:Number;
-	private var pct_PS1_Now:Number;
-	private var pct_PS2_Now:Number;
-	private var pct_PS3_Now:Number;
-	private var pct_FR_Now:Number;
+	static var pct_SB1_Now:Number = 0.75;
+	static var pct_PS1_Now:Number = 0.67;
+	static var pct_PS2_Now:Number = 0.45;
+	static var pct_PS3_Now:Number = 0.25;
+	static var pct_FR_Now:Number  = 0.05;
 	private var pct_warning:DistributedValue;
 	
 	// other options
@@ -132,20 +139,10 @@ class com.theck.ALIA.ALIA
 		ResetLurker();
 		
 		DisconnetOptionsSignals();
-/*		pct_warning.SignalChanged.Disconnect(SettingsChanged, this);
-		showZuberi.SignalChanged.Disconnect(SettingsChanged, this);
-		personalSound.SignalChanged.Disconnect(SettingsChanged, this);
-		fromBeneathSound.SignalChanged.Disconnect(SettingsChanged, this);*/
 	}
 	
 	public function Activate(config:Archive) {
 		DebugText("Activate()");
-				
-		pct_SB1_Now = 0.75;
-		pct_PS1_Now = 0.67;
-		pct_PS2_Now = 0.45;
-		pct_PS3_Now = 0.25;
-		pct_FR_Now  = 0.025;
 				
 		// set options
 		ActivateOptions(config);
@@ -155,7 +152,6 @@ class com.theck.ALIA.ALIA
 		
 		// Announce any relevant settings the first time Activate() is called within NYR
 		AnnounceSettings();
-		DebugText("SB1: is " + SB1_Cast);
 	}
 
 	public function Deactivate():Archive {
@@ -171,7 +167,7 @@ class com.theck.ALIA.ALIA
 	
 	private function IsNYR10() {
 		var zone = m_player.GetPlayfieldID();
-		return (debugMode || zone == 5715); // E10 is 5715
+		return (debugMode || zone == 5715); // E10 & E17 are 5715
 	}
 	
 	private function IsNYR() {
@@ -187,14 +183,16 @@ class com.theck.ALIA.ALIA
 		// if in NYR, connect to the TargetChanged signal 
 		if (IsNYR())
 		{	
-			//ConnectTargetChangedSignal();
 			ConnectVicinitySignals();
+			encounterPhase = 0;
+			numBirds = 0;
+			numHulks = 0;
+			numShadows = 0;
 		}
 		else
 		{		
 			// disconnect all signals
 			ResetLurker();
-			//DisconnectTargetChangedSignal();
 			DisconnectVicinitySignals();
 		}
 		
@@ -210,6 +208,7 @@ class com.theck.ALIA.ALIA
 	//////////////////////////////
 	
 	private function CreateOptions() {		
+		
 		// create options (note: each is a DistributedValue, need to access w/ SetValue() / GetValue() in code
 		// the argument here is the string used to adjust the variable via chat window
 		pct_warning = DistributedValue.Create("alia_warnpct");
@@ -220,6 +219,7 @@ class com.theck.ALIA.ALIA
 	}
 	
 	private function ConnetOptionsSignals() {
+		
 		// connect option change signals to SettingsChanged
 		pct_warning.SignalChanged.Connect(SettingsChanged, this);
 		showZuberi.SignalChanged.Connect(SettingsChanged, this);
@@ -229,6 +229,7 @@ class com.theck.ALIA.ALIA
 	}
 	
 	private function DisconnetOptionsSignals() {
+		
 		// disconnect option change signals 	
 		pct_warning.SignalChanged.Disconnect(SettingsChanged, this);
 		showZuberi.SignalChanged.Disconnect(SettingsChanged, this);
@@ -333,32 +334,27 @@ class com.theck.ALIA.ALIA
 	public function ResetAnnounceFlags() {
 		// only enable announcements if the lurker is below the threshold (crash/reloadui protection)
 		var pct = lurker.GetStat(27, 1) / lurker.GetStat(1, 1);
-		if ( pct > pct_SB1_Now ) 
-		{	
+		if ( pct > pct_SB1_Now ) {	
 			Ann_SB1_Soon = true;
 			Ann_SB1_Now = true;
-			SB1_Cast = false;
 		}
-		if (pct > pct_PS1_Now )
-		{
+		if (pct > pct_PS1_Now ) {
 			Ann_PS1_Soon = true;
 			Ann_PS1_Now = true;
 		}
-		if ( pct > pct_PS2_Now )
-		{
+		if ( pct > pct_PS2_Now ) {
 			Ann_PS2_Soon = true;
 			Ann_PS2_Now = true;
 		}
-		if ( pct > pct_PS3_Now )
-		{
+		if ( pct > pct_PS3_Now ) {
 			Ann_PS3_Soon = true;
 			Ann_PS3_Now = true;
-		}		
+		}
 		Ann_FR_Soon = true;
 		Ann_FR_Now = true;
 	}
 	
-	public function setPercentHealthFlag() { updateHealthDisplay = true; }
+	public function ResetUpdateHealthDisplayFlag() { updateHealthDisplay = true; }
 	
 	public function DetectNPCs(dynelId:ID32):Void {
 		//DebugText("DetectNPCs()");
@@ -368,8 +364,8 @@ class com.theck.ALIA.ALIA
 		// GetType() and m_Type are 50000 for all characters (players, hostile and friendly npcs, etc)
 		// GetNameTagCategory() seems to return 5 for NPCs (hostile or friendly), but 6 for lurker (probably "boss")
 		// GetName() gives the name
-		// GetStat(112) gives the unique character ID, which is what we want to grab I guess
-		// Useful 112s:  Eldritch Guardian (bird) is 37266, (hulk) is ????
+		// GetStat(112) gives the unique character ID, which is what we want to grab
+		// Useful 112s:  Eldritch Guardian (bird) is 37266, (hulk) is 37333
 		// 112s pulled from E1 intro: Alex is 32302, Mei Ling is 32301, Rose is 32299, Zuberi 32303
 		// 112s for lurker:
 		//	SM: 37265 (first spawn), 37263 (after wipe)
@@ -382,6 +378,7 @@ class com.theck.ALIA.ALIA
 		if dynelId.GetType() != 50000 {return; }
 		
 		var dynel:Dynel = Dynel.GetDynel(dynelId);
+		var dynel112:Number = dynel.GetStat(112);
 		
 		/* Debugging stuff
 		DebugText("Dynel GetName(): " + dynel.GetName());
@@ -407,57 +404,86 @@ class com.theck.ALIA.ALIA
 			// set flags for announcements to true
 			ResetAnnounceFlags();
 			
-			// Lock on lurker so that we don't continue to check targets anymore
+			// enable health display updating
 			updateHealthDisplay = true;
 		}
 		
-		// only connect helpful NPCs if we're in combat (avoids entrance grab)
-		else if ( m_player.IsInCombat() ) {
-			if ( !alex && ( dynel.GetStat(112) == alex112 ) ) {
+		// attempt to grab helpful NPCs only under certain conditions (to try and avoid entrance grab)
+		// if we know we're past phase 1, or we're in combat, check for Alex/Rose/Mei
+		else if ( encounterPhase > 1 || m_player.IsInCombat() ) {
+			
+			if ( !alex && ( dynel112 == alex112 ) ) {
 				alex = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
 				alex.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
 				UpdateNPCStatusDisplay();
+				setPhaseState(3, alex.char.GetName());
 				DebugText("DetectNPCs(): Alex hooked");
 			}
-			else if ( !rose && ( dynel.GetStat(112) == rose112 ) ) {			
+			else if ( !rose && ( dynel112 == rose112 ) ) {			
 				rose = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
 				rose.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
 				UpdateNPCStatusDisplay();
+				setPhaseState(3, rose.char.GetName());
 				DebugText("DetectNPCs(): Rose hooked");
 			}
-			else if ( !mei && ( dynel.GetStat(112) == mei112 ) ) {
+			else if ( !mei && ( dynel112 == mei112 ) ) {
 				mei = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
 				mei.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
 				UpdateNPCStatusDisplay();
+				setPhaseState(3, mei.char.GetName());
 				DebugText("DetectNPCs(): Mei hooked");
 			}
-			else if ( !zuberi && ( dynel.GetStat(112) == zuberi112 ) ) {
-				zuberi = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
-				zuberi.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
-				UpdateNPCStatusDisplay();
-				DebugText("DetectNPCs(): Zuberi hooked");	
-				
-				// Zuberi ONLY shows up in P3, so we can use him as a test for phase
-				// this is only needed to help recover from a crash or /reloadui
-				if !SB1_Cast {
-					DebugText("DetectNPCs(): SB1_Cast set to true by Zuberi");	
-					SetShadow1Flag();			
-				}
-			}			
-			// this is only needed to help recover from a crash or /reloadui
-			// note that the guardians in story mode have a 112 of 32407, so they shouldn't trigger this
-			else if !SB1_Cast && ( dynel.GetStat(112) == eguard112 || dynel.GetStat(112) == hulk112 ) {
-				// Birds and hulks only show up in phase 2, so we can use them as a test for phase
-				// TODO: put hulk ID in here
-					DebugText("DetectNPCs(): SB1_Cast set to true by a " + dynel.GetName() );
-				SetShadow1Flag();
-			}
+		}
+		// Zuberi ONLY shows up in phase 3, so we can check for him freely and use him as a phase 3 test/update for crashes/reloadui
+		if ( !zuberi && ( dynel112 == zuberi112 ) ) {
+			zuberi = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
+			zuberi.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
+			UpdateNPCStatusDisplay();
+			setPhaseState(3, zuberi.char.GetName());
+			DebugText("DetectNPCs(): Zuberi hooked");	
 		}
 		
-		// unhook this function if we have all the NPCs
+		// Hulks only show up in phase 2, use them for encounter state detection
+		if ( dynel112 == hulk112 ) {
+			DebugText("DetectNPCs(): Detected " + dynel.GetName() + " #" + ( numHulks + 1 ) );	
+			
+			// grab hulk and store until dead
+			currentHulk = Character.GetCharacter(dynel.GetID());
+			currentHulk.SignalCharacterDied.Connect(HulkDied, this);
+			
+			// encounter state logic - detecting a hulk means at least phase 2
+			setPhaseState(2, "detecting any Hulk");		
+		}
+		
+		// Birds only show up in phase 2, use them for encounter state detection
+		if ( dynel112 == eguard112 ) {
+			DebugText("DetectNPCs(): Detected " + dynel.GetName() + " #" + ( numBirds +1 ) );	
+			
+			// grab bird and store until dead
+			currentBird = Character.GetCharacter(dynel.GetID());
+			currentBird.SignalCharacterDied.Connect(BirdDied, this);
+			
+			// encounter state logic - detecting a hulk means at least phase 2
+			setPhaseState(2, "detecting any Bird");
+		}
+		
+		// unhook this function if we have all the NPCs 
 		if ( alex && rose && mei && zuberi && lurker ) { 
 			DisconnectVicinitySignals(); 
 		}
+	}
+	
+	private function setPhaseState( state:Number, debugText:String ) {
+		if state > encounterPhase {
+			DebugText("encounterPhase changed from " + encounterPhase + " to " + state + " by " + debugText);
+			encounterPhase = state;
+		}
+	}
+	
+	private function GetHealthPercent(char:Character):Number {
+		// tested 6/5/2020: stat enum 1 is max health, stat enum 27 is current health
+		var pct = char.GetStat(27, 1) / char.GetStat(1, 1);
+		return pct;
 	}
 	
 	public function LurkerStatChanged(stat)	{
@@ -465,10 +491,8 @@ class com.theck.ALIA.ALIA
 		
 		if (stat == 27) {
 		
-			// tested 6/5/2020: stat enum 1 is max health, stat enum 27 is current health
-			var currentHP = lurker.GetStat(27, 1);
-			var maxHP = lurker.GetStat(1, 1);
-			var pct = currentHP / maxHP;
+			// get lurker's health percent (decimal form)
+			var pct = GetHealthPercent(lurker);
 			
 			// throttle display updates to every 250 ms
 			if (updateHealthDisplay && !isNaN(pct) ) {
@@ -476,7 +500,10 @@ class com.theck.ALIA.ALIA
 				healthController.UpdateText( Math.round(pct * 1000) / 10 + "%");
 				
 				updateHealthDisplay = false;
-				setTimeout(Delegate.create(this, setPercentHealthFlag), 250 );
+				setTimeout(Delegate.create(this, ResetUpdateHealthDisplayFlag), 250 );
+			}
+			if ( encounterPhase < 1 && pct < 0.99 ) { 
+				setPhaseState(1, "lurker health below 99%");
 			}
 			
 			// Shadow Incoming at 26369244 (75%)
@@ -491,19 +518,14 @@ class com.theck.ALIA.ALIA
 				Ann_SB1_Now = false;
 			}
 			
-			/* 	
-			Everything else only happens in phase 3, so we could put the rest of this inside an "if SB_Cast {}".
-			However if someone crashes, SB1_Cast might not be true and then the addon would stop working.
-			Workaround: put the first PS inside clause  b/c it's possible to push lurker past 67% + pct_warning in phase 1.
-			*/
-			
 			// First Personal Space at 23556525 (67%)
-			if ( Ann_PS1_Soon && SB1_Cast && IsNYR10() && pct < ( pct_PS1_Now + pct_warning.GetValue() / 100 ) ) 
+			// Limit to phase 3 b/c it's possible to push lurker past 67% + pct_warning in phase 1 and have annoying messages during phase 2.
+			if ( Ann_PS1_Soon && ( encounterPhase > 2 ) && IsNYR10() && pct < ( pct_PS1_Now + pct_warning.GetValue() / 100 ) ) 
 			{
 				UpdateWarning("Personal Space Soon (67%)");	
 				Ann_PS1_Soon = false;
 			}
-			else if ( Ann_PS1_Now && SB1_Cast && IsNYR10() && pct < pct_PS1_Now ) 
+			else if ( Ann_PS1_Now && ( encounterPhase > 2 ) && IsNYR10() && pct < pct_PS1_Now ) 
 			{
 				UpdateWarningWithBlink("Personal Space Now! (67%)"); 
 				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
@@ -536,15 +558,15 @@ class com.theck.ALIA.ALIA
 				Ann_PS3_Now = false;
 			}
 				
-			// Final Resort at 1757950 (5%) - actually this seems to happen between 2.5% and 3%
+			// Final Resort at 1757950 (5%) -  this seems to happen between 2.5% and 3% on Story Mode, but who cares about story mode anyway
 			if (Ann_FR_Soon && pct < ( pct_FR_Now + pct_warning.GetValue() / 100 ) ) 
 			{
-				UpdateWarning("Final Resort Soon (3%)");
+				UpdateWarning("Final Resort Soon (5%)");
 				Ann_FR_Soon = false;				
 			}
 			else if (Ann_FR_Now && pct < pct_FR_Now ) 
 			{
-				UpdateWarningWithBlink("Final Resort Now! (3%)"); 
+				UpdateWarningWithBlink("Final Resort Now! (5%)"); 
 				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
 				Ann_FR_Now = false;			
 			}
@@ -554,27 +576,45 @@ class com.theck.ALIA.ALIA
 	public function LurkerCasting(spell) {
 		DebugText("Lurker is casting " + spell);
 		
-		// only decay on the first shadow
-		if ( !SB1_Cast && ( spell == stringShadowOutOfTime ) )
+		// this needs to be throttled because reticle-targetting can cause this to be triggered multiple times in one cast
+		if ( spell == stringShadowOutOfTime && shadowThrottleFlag )
 		{	
-			// delay changing the flag by 15 seconds so that we don't get personal space warnings during phase 2
-			setTimeout(Delegate.create(this, SetShadow1Flag), 25000 );
-			warningController.decayText(3);
+			numShadows++;
+			shadowThrottleFlag = false;
+			
+			// encounter phase logic
+			if numShadows > 2 {
+				setPhaseState(3, "Shadow 3+");
+			}
+			else
+			{
+				setPhaseState(2, "Shadow 1");
+			}
+			
+			// reset throttle flag after 10 seconds (cast is only 8 seconds)
+			setTimeout(Delegate.create(this, ResetShadowThrottleFlag), 10000);
+			
+			// only decay warning text on the first shadow
+			if numShadows < 2 {
+				warningController.decayText(3);
+			}
 		}
-		// decay on every PS
+		
+		// decay warning text when PS is cast
 		else if (spell == stringPersonalSpace)
 		{
-			warningController.decayText(3);				
-			// can clear the SB1 flag here too (in case of crash or /reloadui)
-			if !SB1_Cast { SB1_Cast = true; }		
+			warningController.decayText(3);			
+			setPhaseState(3, "Personal Space");
 		}
-		// decay FR and stop blinking effect
+		
+		// decay warning text and stop blinking effect when FR cast
 		else if (spell == stringFinalResort)
 		{
 			warningController.decayText(3);
 			warningController.stopBlink();
 			warningController.setTextColor(nowColor);
 		}
+		
 		// play a warning sound for pod casts (audible cue for cleansers)
 		else if (spell == stringFromBeneath )
 		{
@@ -582,10 +622,7 @@ class com.theck.ALIA.ALIA
 		}
 	}
 	
-	private function SetShadow1Flag() {
-		SB1_Cast = true;
-		DebugText("SetShadow1Flag(): " + SB1_Cast);
-	}
+	private function ResetShadowThrottleFlag() { shadowThrottleFlag = true;	}
 	
 	////////////////////////////////
 	////// Signal Connections //////
@@ -618,6 +655,14 @@ class com.theck.ALIA.ALIA
 		// decay any remaining message, also stop blinking
 		warningController.decayText(3);
 		warningController.stopBlink();
+		
+		// reset accumulators / encounter state variable
+		numBirds = 0;
+		numHulks = 0;
+		numShadows = 0;
+		encounterPhase = 0;
+		currentBird = undefined;
+		currentHulk = undefined;
 	}
 	
 	public function ConnectLurkerSignals() {	
@@ -638,6 +683,32 @@ class com.theck.ALIA.ALIA
 		lurker.SignalStatChanged.Disconnect(LurkerStatChanged, this);
 		lurker.SignalCharacterDied.Disconnect(LurkerDied, this);
 		lurker.SignalCharacterDestructed.Disconnect(ResetLurker, this);		
+	}
+	
+	public function HulkDied() {
+		
+		// disconnect signals
+		currentHulk.SignalCharacterDied.Disconnect(HulkDied, this);
+		currentHulk = undefined; // probably not needed
+		
+		// increment Hulk Counter
+		numHulks++;	
+		
+		// encounter state logic - update to phase 3 if this is the third hulk
+		if ( numHulks > 2 ) { setPhaseState(3, "Hulk #" + numHulks); }
+	}
+	
+	public function BirdDied() {
+		
+		// disconnect signals
+		currentBird.SignalCharacterDied.Disconnect(BirdDied, this);
+		currentBird = undefined; // probably not needed
+		
+		// increment Hulk Counter
+		numBirds++;	
+		
+		// encounter state logic - update to phase 3 if this is the third bird
+		if ( numBirds > 2 ) { setPhaseState(3, "Bird #" + numBirds); }	
 	}
 	
 	public function ConnectVicinitySignals() {
@@ -672,7 +743,7 @@ class com.theck.ALIA.ALIA
 	///////////////////////
 	
 	public function PlayPersonalSpaceWarningSound() {
-		// breaking target and retargeting the boss seems to somehow call the LurkerCasting function a second time,
+		// breaking target and retargeting the boss can generate the signal multiple times,
 		// so we have to throttle the sound playing
 		if ( !personalSoundAlreadyPlaying ) {
 			// throttle sound 
@@ -692,7 +763,7 @@ class com.theck.ALIA.ALIA
 	}
 	
 	public function PlayFromBeneathWarningSound() {
-		// breaking target and retargeting the boss seems to somehow call the LurkerCasting function a second time,
+		// breaking target and retargeting the boss can generate the signal multiple times,
 		// so we have to throttle the sound playing
 		if ( !fromBeneathSoundAlreadyPlaying ) {
 			// throttle sound 
@@ -853,8 +924,6 @@ class com.theck.ALIA.ALIA
 				npcDisplay.setGUIEdit(true);
 				npcDisplay.clip.onPress = Delegate.create(this, npcStartDrag);
 				npcDisplay.clip.onRelease = Delegate.create(this, npcStopDrag);
-				
-				//if (debugMode && Boolean(fromBeneathSound.GetValue())) { PlayFromBeneathWarningSound(); }
 			} 
 			else {
 				DebugText("GuiEdit: state false");
@@ -875,8 +944,6 @@ class com.theck.ALIA.ALIA
 				npcDisplay.clip.onPress = undefined;
 				npcDisplay.clip.onRelease = undefined;
 				npcDisplay.setGUIEdit(false);
-				
-				//if (debugMode  && Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
 			}
 		}
     }
@@ -885,69 +952,4 @@ class com.theck.ALIA.ALIA
 	static function DebugText(text) {
 		if (debugMode) Debugger.PrintText(text);
 	}
-	
-	
-	///////////////////////////////////////
-	////// Deprecated - delete later //////
-	///////////////////////////////////////
-		
-/*	public function TargetChanged(id:ID32) {	
-		//DebugText("TargetChanged id passed is " + id,debugMode);
-				
-		// If we haven't yet locked on to lurker and this id is useful
-		if (!lurkerLocked && !id.IsNull()) {
-			
-			// update current target variable
-			var currentTarget = Character.GetCharacter(id);
-			DebugText("currentTarget GetName is " + currentTarget.GetName()); //dump name for testing
-			
-			// if the current target's name is "The Unutterable Lurker" (32030, 32433, 32030 should all work here)
-			if (currentTarget.GetName() == stringLurker ) {
-				
-				// set flags for announcements to true
-				ResetAnnounceFlags();
-				
-				// store lurker variable
-				lurker = currentTarget;
-				
-				// Connect to lurker-specific signals
-				ConnectLurkerSignals();
-				
-				// Lock on lurker so that we don't continue to check targets anymore
-				lurkerLocked = true;
-				updateHealthDisplay = true;
-				DebugText("Lurker Locked!!")
-				// TODO: should we just call DisconnectTargetChangedSignal() here and remove hte lurkerLocked flag?
-			}
-		}
-	}
-	
-	
-	
-	public function ConnectTargetChangedSignal() {
-		DebugText("TargetChanged connected")
-		
-		// connects to targetchanged signal to search for lurker
-		m_player.SignalOffensiveTargetChanged.Connect(TargetChanged, this);
-		
-	}
-		
-	public function DisconnectTargetChangedSignal()	{
-		DebugText("TargetChanged disconnected")
-		
-		// disconnect targetchanged signal (usually called only when leaving NYR)
-		m_player.SignalOffensiveTargetChanged.Disconnect(TargetChanged, this);
-	}
-	
-	// from LairTracker - find dynels that were already loaded before connecting signals
-	private function kickstart() {
-		DebugText("kickstart()");
-		var ls:WeakList = Dynel.s_DynelList
-		for (var num = 0; num < ls.GetLength(); num++) {
-			var dyn:Character = ls.GetObject(num);
-			DetectNPCs(dyn.GetID());
-		}
-	}
-	*/
-
 }
