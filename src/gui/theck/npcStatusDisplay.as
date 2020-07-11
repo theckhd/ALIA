@@ -58,8 +58,6 @@ class gui.theck.npcStatusDisplay
 		InitializeStatusText(zuberiStatusText);
 	}
 	
-	
-	
 	public function InitializeLetter(field:TextField) {	
 		
         var textFormat:TextFormat = new TextFormat("_StandardFont", textSize,0xFFFFFF, true);
@@ -96,8 +94,6 @@ class gui.theck.npcStatusDisplay
 		field.background = true;
 		field.backgroundColor = 0x000000;
 		//field.border = true;
-		
-		//SetFakeStatusText();
 	}
 	
 	private function SetFakeStatusText() {
@@ -108,20 +104,16 @@ class gui.theck.npcStatusDisplay
 	}
 	
 	public function EnableGUIEdit(state:Boolean)
-	{
-		// these first two should go in ALIA for saving settings
-		//clip.onPress = Delegate.create(this, npcStartDrag);
-		//clip.onRelease = Delegate.create(this, npcStopDrag);
-		
+	{		
 		//UpdateText("100%");
-		setVisible(true);
-		toggleBackground(true);
-		enableInteraction(true);
+		SetVisible(true);
+		ToggleBackground(true);
+		EnableInteraction(true);
 	}
 	
-	public function setGUIEdit(state:Boolean) {
-		toggleBackground(state);
-		enableInteraction(state);
+	public function SetGUIEdit(state:Boolean) {
+		ToggleBackground(state);
+		EnableInteraction(state);
 		if state {
 			UpdateAll(0, 0, 0, 0);
 			SetFakeStatusText();
@@ -166,7 +158,7 @@ class gui.theck.npcStatusDisplay
 		field.text = statusText[status];
 	}
 	
-	public function setPos(pos:Point) {
+	public function SetPos(pos:Point) {
 		// sanitize inputs - this fixes a bug where someone changes screen resolution and suddenly the field is off the visible screen
 		if ( pos.x > Stage.width || pos.x < 0 ) { pos.x = Stage.width / 2; }
 		if ( pos.y > Stage.height || pos.y < 0 ) { pos.y = Stage.height / 2; }
@@ -176,24 +168,87 @@ class gui.theck.npcStatusDisplay
 		clip._y = pos.y;
 	}
 	
-	public function getPos() {
+	public function GetPos() {
 		var pos:Point = new Point(clip._x, clip._y);
-		Debugger.DebugText("getPos: x: " + pos.x + "  y: " + pos.y, debugMode);
+		Debugger.DebugText("GetPos: x: " + pos.x + "  y: " + pos.y, debugMode);
 		return pos;
 	}
 		
-	public function setVisible(flag:Boolean, zuberiFlag:Boolean) {
+	public function SetVisible(flag:Boolean, phase:Number, zuberiFlag:Boolean) {
 		clip._visible = flag;	
 		if flag {
-			if (arguments.length == 1) { 
-				zuberiFlag = flag; 
-				Debugger.DebugText("npcStatusDisplay.setVisible(): zuberiFlag defaulted to flag (" + flag + ")", debugMode);
-			}
-			showZuberi( zuberiFlag );
+			SetVisibilityByPhase( phase, zuberiFlag );
 		}
 	}
 	
-	public function toggleBackground(flag:Boolean) {
+	public function SetVisibilityByPhase( phase:Number, zuberiFlag:Boolean ) {
+		// if phase isn't specified default to 0
+		if (arguments.length == 0) {
+			phase = 0;
+			Debugger.DebugText("npcStatusDisplay.SetVisibilityByPhase(): phase defaulted to 0", debugMode);
+		}
+		// if zuberi isn't specified default to true
+		if (arguments.length == 1) {
+			zuberiFlag = true;
+			Debugger.DebugText("npcStatusDisplay.SetVisibilityByPhase(): zuberiFlag defaulted to true", debugMode);
+		}
+		
+		// if we haven't started yet, show everything
+		if phase < 1 
+		{			
+			ShowMeiStatus(true);
+			ShowRoseStatus(true);
+			ShowAlexStatus(true);
+			ShowZuberiStatus(zuberiFlag);			
+		}
+		
+		// phase 1: hide all
+		else if phase < 2 
+		{
+			ShowMeiStatus(false);
+			ShowRoseStatus(false);
+			ShowAlexStatus(false);
+			ShowZuberiStatus(false);
+		}
+		// in phase 2 mei is used for counting birds and rose ise for counting downfalls
+		else if phase == 2 
+		{			
+			ShowMeiStatus(true);
+			ShowRoseStatus(true);	
+			meiLetter.text = "B";
+			roseLetter.text = "D";
+			UpdateBirdNumber( 0 );
+			UpdateDownfallNumber( 0 );
+			meiLetter.textColor = statusColors[ 0 ];
+			meiStatusText.textColor = statusColors[ 0 ];
+			roseLetter.textColor = statusColors[ 0 ];
+			roseStatusText.textColor = statusColors[ 0 ];
+			
+			// alex and zuberi are not used, hide
+			ShowAlexStatus(false);
+			ShowZuberiStatus(false);
+		}
+		// in phase 3, use default settings
+		else if phase > 2 
+		{			
+			ShowMeiStatus(true);
+			ShowRoseStatus(true);
+			ShowAlexStatus(true);
+			ShowZuberiStatus(zuberiFlag);
+			
+			// reset text fields to phase 3 values
+			meiLetter.text = "M";
+			roseLetter.text = "R";
+			meiStatusText.text = "";
+			roseStatusText.text = "";	
+		}		
+	}
+	
+	public function UpdateBirdNumber( num:Number ) { meiStatusText.text = String(num); }
+	
+	public function UpdateDownfallNumber( num:Number ) { roseStatusText.text = String(num); }
+	
+	public function ToggleBackground(flag:Boolean) {
 		alexLetter.background = flag;
 		roseLetter.background = flag;
 		meiLetter.background = flag;
@@ -203,12 +258,8 @@ class gui.theck.npcStatusDisplay
 		roseStatusText.background = flag;
 		zuberiStatusText.background = flag;		
 	}
-	
-	//public function setTextColor(color:Number) {
-		//clip.textColor = color;
-	//}
-	
-	public function enableInteraction(state:Boolean) {
+
+	public function EnableInteraction(state:Boolean) {
 		clip.hitTestDisable = !state;
 		alexLetter.hitTestDisable = !state;
 		meiLetter.hitTestDisable = !state;
@@ -220,12 +271,35 @@ class gui.theck.npcStatusDisplay
 		zuberiStatusText.hitTestDisable = !state;
 	}
 	
-	public function decayDisplay(decayTime) {
+	public function DecayDisplay(decayTime) {
 		Debugger.DebugText("decayText called", debugMode);
-		Tweener.addTween(clip, {_alpha : 0, delay : 2, time : decayTime});	
+		Tweener.addTween(meiLetter, {_alpha : 0, delay : 2, time : decayTime});
+		Tweener.addTween(meiStatusText, {_alpha : 0, delay : 2, time : decayTime});
+		Tweener.addTween(roseLetter, {_alpha : 0, delay : 2, time : decayTime});
+		Tweener.addTween(roseStatusText, {_alpha : 0, delay : 2, time : decayTime});
+		Tweener.addTween(alexLetter, {_alpha : 0, delay : 2, time : decayTime});
+		Tweener.addTween(alexStatusText, {_alpha : 0, delay : 2, time : decayTime});
+		Tweener.addTween(zuberiLetter, {_alpha : 0, delay : 2, time : decayTime});
+		Tweener.addTween(zuberiStatusText, {_alpha : 0, delay : 2, time : decayTime});
 	}
 	
-	public function showZuberi(flag:Boolean) {
+	
+	public function ShowMeiStatus(flag:Boolean) {
+		meiLetter._visible = flag;
+		meiStatusText._visible = flag;
+	}
+	
+	public function ShowRoseStatus(flag:Boolean) {
+		roseLetter._visible = flag;
+		roseStatusText._visible = flag;
+	}
+	
+	public function ShowAlexStatus(flag:Boolean) {
+		alexLetter._visible = flag;
+		alexStatusText._visible = flag;
+	}
+	
+	public function ShowZuberiStatus(flag:Boolean) {
 		zuberiLetter._visible = flag;
 		zuberiStatusText._visible = flag;
 	}

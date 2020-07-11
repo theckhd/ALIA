@@ -36,14 +36,27 @@ class com.theck.ALIA.ALIA
 	static var stringPersonalSpace:String = LDBFormat.LDBGetText(50210, 8934415); //"Personal Space";
 	static var stringFinalResort:String = LDBFormat.LDBGetText(50210, 7963851); //"Final Resort";
 	static var stringFromBeneath:String = LDBFormat.LDBGetText(50210, 8934432); //"From Beneath You, It Devours"
+	static var stringDownfall:String = LDBFormat.LDBGetText(50210, 7958970); //"Downfall", also 7958971
 	static var alex112:Number = 32302;
 	static var mei112:Number = 32301;
 	static var rose112:Number = 32299;
 	static var zuberi112:Number = 32303;
-	static var eguard112:Number = 37266;
+	static var bird112_SM:Number = 37266; // The two in SM parking garage are 32407 
+	static var bird112_E1:Number = 32452;
+	static var bird112_E5:Number = 37258;
+	static var bird112_E10:Number = 35482; // Guess, other possibilites: 37297, 37298, 37299
+	static var bird112_E17:Number = 37297; // Guess
 	static var hulk112:Number = 37333; 
 	static var textDecayTime:Number = 10;
 	static var nowColor:Number = 0xFF0000;
+	
+/*	These aren't needed right now, just here for reference
+	static var lurkerMaxHealthSM  =  3262582;
+	static var lurkerMaxHealthE1  =  3262582;
+	static var lurkerMaxHealthE5  = 11140440;
+	static var lurkerMaxHealthE10 = 35158992;
+	static var lurkerMaxHealthE17 = 50000000; //absurd value until E17 is released
+*/
 	
 	// character variables
 	public var m_player:Character;
@@ -67,17 +80,17 @@ class com.theck.ALIA.ALIA
 	private var npcDisplay:npcStatusDisplay;
 	
 	// logic flags and accumulators
-	private var Ann_SB1_Soon:Boolean;
-	private var Ann_SB1_Now:Boolean;
-	private var Ann_PS1_Soon:Boolean;
-	private var Ann_PS1_Now:Boolean;
-	private var Ann_PS2_Soon:Boolean;
-	private var Ann_PS2_Now:Boolean;
-	private var Ann_PS3_Soon:Boolean;
-	private var Ann_PS3_Now:Boolean;
-	private var Ann_FR_Soon:Boolean;
-	private var Ann_FR_Now:Boolean;
-	private var AnnounceSettingsBool:Boolean;
+	private var ann_SB1_Soon:Boolean;
+	private var ann_SB1_Now:Boolean;
+	private var ann_PS1_Soon:Boolean;
+	private var ann_PS1_Now:Boolean;
+	private var ann_PS2_Soon:Boolean;
+	private var ann_PS2_Now:Boolean;
+	private var ann_PS3_Soon:Boolean;
+	private var ann_PS3_Now:Boolean;
+	private var ann_FR_Soon:Boolean;
+	private var ann_FR_Now:Boolean;
+	private var announceSettingsBool:Boolean;
 	private var personalSoundAlreadyPlaying:Boolean = false;
 	private var fromBeneathSoundAlreadyPlaying:Boolean = false;
 	private var loadFinished = false;
@@ -85,7 +98,10 @@ class com.theck.ALIA.ALIA
 	private var numBirds:Number;
 	private var numHulks:Number;
 	private var numShadows:Number;
+	private var numDownfalls:Number;
 	private var shadowThrottleFlag:Boolean = true;
+	private var downfallThrottleFlag:Boolean = true;
+	private var lurkerEliteLevel:Number  = 0;
 	
 	
 	// percentages
@@ -128,8 +144,8 @@ class com.theck.ALIA.ALIA
 		ConnetOptionsSignals();
 		
 		// announce settings flag
-		AnnounceSettingsBool = true;
-		setTimeout(Delegate.create(this, setLoadFinishedFlag), 5000);
+		announceSettingsBool = true;
+		setTimeout(Delegate.create(this, SetLoadFinishedFlag), 5000);
 	}
 
 	public function Unload() {		
@@ -175,7 +191,7 @@ class com.theck.ALIA.ALIA
 		return (debugMode || IsNYR10() || zone == 5710); // SM, E1, and E5 are all 5710
 	}
 	
-	private function setLoadFinishedFlag() {
+	private function SetLoadFinishedFlag() {
 		loadFinished = true;
 	}
 		
@@ -188,6 +204,7 @@ class com.theck.ALIA.ALIA
 			numBirds = 0;
 			numHulks = 0;
 			numShadows = 0;
+			numDownfalls = 0;
 		}
 		else
 		{		
@@ -197,10 +214,10 @@ class com.theck.ALIA.ALIA
 		}
 		
 		// update visibility  & blink state of text fields
-		warningController.setVisible( IsNYR() );
-		warningController.stopBlink();		
-		healthController.setVisible( IsNYR() ); 
-		npcDisplay.setVisible( IsNYR(), Boolean(showZuberi.GetValue()) ); 
+		warningController.SetVisible( IsNYR() );
+		warningController.StopBlink();		
+		healthController.SetVisible( IsNYR() ); 
+		npcDisplay.SetVisible( IsNYR(), encounterPhase, ShowZuberi() ); 
 	}
 	
 	//////////////////////////////
@@ -242,13 +259,13 @@ class com.theck.ALIA.ALIA
 		
 		// Move text to desired position
 		w_pos = config.FindEntry("alia_warnPosition", new Point(600, 600));		
-		warningController.setPos(w_pos);
+		warningController.SetPos(w_pos);
 		
 		h_pos = config.FindEntry("alia_healthPosition", new Point(600, 500));
-		healthController.setPos(h_pos);
+		healthController.SetPos(h_pos);
 		
 		n_pos = config.FindEntry("alia_npcPosition", new Point(600, 400));
-		npcDisplay.setPos(n_pos);
+		npcDisplay.SetPos(n_pos);
 		
 		// set options
 		// the arguments here are the names of the settings within Config (not the slash command strings)
@@ -277,14 +294,13 @@ class com.theck.ALIA.ALIA
 		return config
 	}
 	
-	
 	private function SettingsChanged(dv:DistributedValue) {
 		
 		DebugText("SettingsChanged()");
         DebugText("SettingsChanged: dv.GetName() is " + dv.GetName());
         DebugText("SettingsChanged: dv.GetValue() is " + dv.GetValue());
 		
-		AnnounceSettingsBool = true;
+		announceSettingsBool = true;
 		
 		// switch off of the settings name (defined in ALIA constructor)
 		switch (dv.GetName()) {
@@ -293,7 +309,7 @@ class com.theck.ALIA.ALIA
 			break;
 		case "alia_zuberi":
 			showZuberi = dv;
-			npcDisplay.setVisible( IsNYR(), Boolean(showZuberi.GetValue()));
+			npcDisplay.SetVisible( IsNYR(), encounterPhase, ShowZuberi() );
 			break;
 		case "alia_ps_sound":
 			personalSound = dv;
@@ -309,10 +325,10 @@ class com.theck.ALIA.ALIA
 	}
 	
 	public function AnnounceSettings(override:Boolean) {
-		if ( debugMode || override || ( AnnounceSettingsBool && IsNYR() ) )  {
+		if ( debugMode || override || ( announceSettingsBool && IsNYR() ) )  {
 			com.GameInterface.UtilsBase.PrintChatText("ALIA:" + ( IsNYR() ? " NYR Detected." : "" ) + " Warning setting is " + pct_warning.GetValue() + '%, Zuberi is ' + ( showZuberi.GetValue() ? "shown" : "hidden" ) + ". Sound alert for Personal Space " + ( personalSound.GetValue() ? "enabled" : "disabled" ) + ". Sound alert for Pod cast " + ( fromBeneathSound.GetValue() ? "enabled" : "disabled" ) + "." );
 			com.GameInterface.UtilsBase.PrintChatText("ALIA: Type \"/option alia_options true\" to see slash commands.");
-			AnnounceSettingsBool = false; // only resets on Load() or SettingsChanged()
+			announceSettingsBool = false; // only resets on Load() or SettingsChanged()
 		}
 		
 	}
@@ -335,26 +351,58 @@ class com.theck.ALIA.ALIA
 		// only enable announcements if the lurker is below the threshold (crash/reloadui protection)
 		var pct = lurker.GetStat(27, 1) / lurker.GetStat(1, 1);
 		if ( pct > pct_SB1_Now ) {	
-			Ann_SB1_Soon = true;
-			Ann_SB1_Now = true;
+			ann_SB1_Soon = true;
+			ann_SB1_Now = true;
 		}
 		if (pct > pct_PS1_Now ) {
-			Ann_PS1_Soon = true;
-			Ann_PS1_Now = true;
+			ann_PS1_Soon = true;
+			ann_PS1_Now = true;
 		}
 		if ( pct > pct_PS2_Now ) {
-			Ann_PS2_Soon = true;
-			Ann_PS2_Now = true;
+			ann_PS2_Soon = true;
+			ann_PS2_Now = true;
 		}
 		if ( pct > pct_PS3_Now ) {
-			Ann_PS3_Soon = true;
-			Ann_PS3_Now = true;
+			ann_PS3_Soon = true;
+			ann_PS3_Now = true;
 		}
-		Ann_FR_Soon = true;
-		Ann_FR_Now = true;
+		ann_FR_Soon = true;
+		ann_FR_Now = true;
 	}
 	
 	public function ResetUpdateHealthDisplayFlag() { updateHealthDisplay = true; }
+	
+	public function GetLurkerEliteLevel( lurker112:Number ):Number {
+		
+		var elevel:Number = 0; // default to story mode
+		
+		// test against 112 value (see DetectNPCs comment block below)
+		switch ( lurker112 ) {
+			// TODO: add cases for E17
+			case 35448:
+			case 35449:
+				elevel = 10;
+				break;
+			case 37256:
+			case 37255:
+				elevel = 5;
+				break;
+			case 32433:
+			case 32030:
+				elevel = 1;
+				break;
+			case 37265:
+			case 37263:
+				elevel = 0;
+				break;
+			default:
+				elevel = 0;
+				DebugText("Lurker 112 unknown, default to story modde");
+				break;
+		}
+		DebugText("GetLurkerEliteLevel(): Lurker found to be elevel = " + elevel + " (dynel112: " + lurker112 + ")");
+		return elevel;
+	}
 	
 	public function DetectNPCs(dynelId:ID32):Void {
 		//DebugText("DetectNPCs()");
@@ -380,10 +428,14 @@ class com.theck.ALIA.ALIA
 		var dynel:Dynel = Dynel.GetDynel(dynelId);
 		var dynel112:Number = dynel.GetStat(112);
 		
+		if ( debugMode && ( dynel.GetName() == "Eldritch Guardian" || dynel.GetName() == "Zero-Point Titan" ) ) {
+			DebugText("Detected " + dynel.GetName() + " with id " + dynel.GetStat(112));
+		}
+		
 		/* Debugging stuff
+		DebugText("Dynel Id: " + dynelId);
 		DebugText("Dynel GetName(): " + dynel.GetName());
 		DebugText("Dynel Stat 112: " + dynel.GetStat(112));
-		DebugText("Dynel Id: " + dynelId);
 		DebugText("Dynel GetID(): " + dynel.GetID());
 		DebugText("Dynel Interaction type: " + ProjectUtilsBase.GetInteractionType(dynelId));
 		DebugText("Dynel m_Type: " + dynelId.m_Type);
@@ -406,6 +458,9 @@ class com.theck.ALIA.ALIA
 			
 			// enable health display updating
 			updateHealthDisplay = true;
+			
+			// attempt to set difficulty level
+			lurkerEliteLevel = GetLurkerEliteLevel(dynel112);
 		}
 		
 		// attempt to grab helpful NPCs only under certain conditions (to try and avoid entrance grab)
@@ -416,21 +471,21 @@ class com.theck.ALIA.ALIA
 				alex = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
 				alex.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
 				UpdateNPCStatusDisplay();
-				setPhaseState(3, alex.char.GetName());
+				SetPhaseState(3, alex.char.GetName());
 				DebugText("DetectNPCs(): Alex hooked");
 			}
 			else if ( !rose && ( dynel112 == rose112 ) ) {			
 				rose = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
 				rose.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
 				UpdateNPCStatusDisplay();
-				setPhaseState(3, rose.char.GetName());
+				SetPhaseState(3, rose.char.GetName());
 				DebugText("DetectNPCs(): Rose hooked");
 			}
 			else if ( !mei && ( dynel112 == mei112 ) ) {
 				mei = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
 				mei.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
 				UpdateNPCStatusDisplay();
-				setPhaseState(3, mei.char.GetName());
+				SetPhaseState(3, mei.char.GetName());
 				DebugText("DetectNPCs(): Mei hooked");
 			}
 		}
@@ -439,7 +494,7 @@ class com.theck.ALIA.ALIA
 			zuberi = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
 			zuberi.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
 			UpdateNPCStatusDisplay();
-			setPhaseState(3, zuberi.char.GetName());
+			SetPhaseState(3, zuberi.char.GetName());
 			DebugText("DetectNPCs(): Zuberi hooked");	
 		}
 		
@@ -452,19 +507,24 @@ class com.theck.ALIA.ALIA
 			currentHulk.SignalCharacterDied.Connect(HulkDied, this);
 			
 			// encounter state logic - detecting a hulk means at least phase 2
-			setPhaseState(2, "detecting any Hulk");		
+			SetPhaseState(2, "detecting a Hulk");		
 		}
 		
-		// Birds only show up in phase 2, use them for encounter state detection
-		if ( dynel112 == eguard112 ) {
+		// Birds only show up in phase 2, use them for encounter state detection. Each difficulty has a different id, because why the hell not.
+		if ( dynel112 == bird112_SM || dynel112 == bird112_E1 || dynel112 == bird112_E5 || dynel112 == bird112_E10 || dynel112 == bird112_E17 ) {
 			DebugText("DetectNPCs(): Detected " + dynel.GetName() + " #" + ( numBirds +1 ) );	
 			
 			// grab bird and store until dead
 			currentBird = Character.GetCharacter(dynel.GetID());
 			currentBird.SignalCharacterDied.Connect(BirdDied, this);
+			currentBird.SignalCommandStarted.Connect(BirdCasting, this);
 			
 			// encounter state logic - detecting a hulk means at least phase 2
-			setPhaseState(2, "detecting any Bird");
+			SetPhaseState(2, "detecting a Bird");
+			
+			// update bird/downfall display - add 1 since we only count the birds once they die
+			npcDisplay.UpdateBirdNumber( numBirds + 1 );	
+			npcDisplay.UpdateDownfallNumber( numDownfalls );
 		}
 		
 		// unhook this function if we have all the NPCs 
@@ -473,10 +533,18 @@ class com.theck.ALIA.ALIA
 		}
 	}
 	
-	private function setPhaseState( state:Number, debugText:String ) {
+	private function SetPhaseState( state:Number, debugText:String ) {
 		if state > encounterPhase {
 			DebugText("encounterPhase changed from " + encounterPhase + " to " + state + " by " + debugText);
+			
+			// set encounter state variable and update npcStatusDisplay visibility
 			encounterPhase = state;
+			npcDisplay.SetVisibilityByPhase( encounterPhase, ShowZuberi() );
+			
+			// if we've moved to phase 3, force an update status
+			if state > 2 {
+				UpdateNPCStatusDisplay();
+			}
 		}
 	}
 	
@@ -503,72 +571,72 @@ class com.theck.ALIA.ALIA
 				setTimeout(Delegate.create(this, ResetUpdateHealthDisplayFlag), 250 );
 			}
 			if ( encounterPhase < 1 && pct < 0.99 ) { 
-				setPhaseState(1, "lurker health below 99%");
+				SetPhaseState(1, "lurker health below 99%");
 			}
 			
 			// Shadow Incoming at 26369244 (75%)
-			if ( Ann_SB1_Soon && pct < ( pct_SB1_Now + pct_warning.GetValue() / 100 ) ) 
+			if ( ann_SB1_Soon && pct < ( pct_SB1_Now + pct_warning.GetValue() / 100 ) ) 
 			{
 				UpdateWarning("Shadow Soon (75%)");
-				Ann_SB1_Soon = false;
+				ann_SB1_Soon = false;
 			}
-			else if ( Ann_SB1_Now && pct < pct_SB1_Now ) 
+			else if ( ann_SB1_Now && pct < pct_SB1_Now ) 
 			{
 				UpdateWarningWithBlink("Shadow Now! (75%)"); 
-				Ann_SB1_Now = false;
+				ann_SB1_Now = false;
 			}
 			
 			// First Personal Space at 23556525 (67%)
 			// Limit to phase 3 b/c it's possible to push lurker past 67% + pct_warning in phase 1 and have annoying messages during phase 2.
-			if ( Ann_PS1_Soon && ( encounterPhase > 2 ) && IsNYR10() && pct < ( pct_PS1_Now + pct_warning.GetValue() / 100 ) ) 
+			if ( ann_PS1_Soon && ( encounterPhase > 2 ) && IsNYR10() && pct < ( pct_PS1_Now + pct_warning.GetValue() / 100 ) ) 
 			{
 				UpdateWarning("Personal Space Soon (67%)");	
-				Ann_PS1_Soon = false;
+				ann_PS1_Soon = false;
 			}
-			else if ( Ann_PS1_Now && ( encounterPhase > 2 ) && IsNYR10() && pct < pct_PS1_Now ) 
+			else if ( ann_PS1_Now && ( encounterPhase > 2 ) && IsNYR10() && pct < pct_PS1_Now ) 
 			{
 				UpdateWarningWithBlink("Personal Space Now! (67%)"); 
 				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
-				Ann_PS1_Now = false;
+				ann_PS1_Now = false;
 			}
 			
 			// Second Personal Space at 15821546 (45%)
-			else if ( Ann_PS2_Soon && IsNYR10() && pct < ( pct_PS2_Now + pct_warning.GetValue() / 100 ) ) 
+			else if ( ann_PS2_Soon && IsNYR10() && pct < ( pct_PS2_Now + pct_warning.GetValue() / 100 ) ) 
 			{
 				UpdateWarning("Personal Space Soon (45%)");	
-				Ann_PS2_Soon = false;
+				ann_PS2_Soon = false;
 			}
-			else if ( Ann_PS2_Now && IsNYR10() && pct < pct_PS2_Now ) 
+			else if ( ann_PS2_Now && IsNYR10() && pct < pct_PS2_Now ) 
 			{
 				UpdateWarningWithBlink("Personal Space Now! (45%)"); 
 				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
-				Ann_PS2_Now = false;
+				ann_PS2_Now = false;
 			}
 			
 			// Third Personal Space at 8789478 (25%)
-			else if ( Ann_PS3_Soon && IsNYR10() && pct < ( pct_PS3_Now + pct_warning.GetValue() / 100 ) ) 
+			else if ( ann_PS3_Soon && IsNYR10() && pct < ( pct_PS3_Now + pct_warning.GetValue() / 100 ) ) 
 			{
 				UpdateWarning("Personal Space Soon (25%)");	
-				Ann_PS3_Soon = false;		
+				ann_PS3_Soon = false;		
 			}
-			else if (Ann_PS3_Now && IsNYR10() && pct < pct_PS3_Now ) 
+			else if (ann_PS3_Now && IsNYR10() && pct < pct_PS3_Now ) 
 			{
 				UpdateWarningWithBlink("Personal Space 3 Now! (25%)");
 				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
-				Ann_PS3_Now = false;
+				ann_PS3_Now = false;
 			}
 				
 			// Final Resort at 1757950 (5%) -  this seems to happen between 2.5% and 3% on Story Mode, but who cares about story mode anyway
-			if (Ann_FR_Soon && pct < ( pct_FR_Now + pct_warning.GetValue() / 100 ) ) 
+			if (ann_FR_Soon && pct < ( pct_FR_Now + pct_warning.GetValue() / 100 ) ) 
 			{
 				UpdateWarning("Final Resort Soon (5%)");
-				Ann_FR_Soon = false;				
+				ann_FR_Soon = false;				
 			}
-			else if (Ann_FR_Now && pct < pct_FR_Now ) 
+			else if (ann_FR_Now && pct < pct_FR_Now ) 
 			{
 				UpdateWarningWithBlink("Final Resort Now! (5%)"); 
 				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
-				Ann_FR_Now = false;			
+				ann_FR_Now = false;			
 			}
 		}
 	}
@@ -582,13 +650,13 @@ class com.theck.ALIA.ALIA
 			numShadows++;
 			shadowThrottleFlag = false;
 			
-			// encounter phase logic
-			if numShadows > 2 {
-				setPhaseState(3, "Shadow 3+");
+			// encounter phase logic - if 4rd shadow (5th on SM), set to phase 3
+			if ( numShadows > 3  && lurkerEliteLevel > 0 ) || ( numShadows > 4 ) {
+				SetPhaseState(3, "Shadow #" + numShadows );
 			}
-			else
-			{
-				setPhaseState(2, "Shadow 1");
+			// otherwise set to phase 2 (shadow 1, or crash detection)
+			else {
+				SetPhaseState(2, "a Shadow cast");
 			}
 			
 			// reset throttle flag after 10 seconds (cast is only 8 seconds)
@@ -596,23 +664,23 @@ class com.theck.ALIA.ALIA
 			
 			// only decay warning text on the first shadow
 			if numShadows < 2 {
-				warningController.decayText(3);
+				warningController.DecayText(3);
 			}
 		}
 		
 		// decay warning text when PS is cast
 		else if (spell == stringPersonalSpace)
 		{
-			warningController.decayText(3);			
-			setPhaseState(3, "Personal Space");
+			warningController.DecayText(3);			
+			SetPhaseState(3, "Personal Space");
 		}
 		
 		// decay warning text and stop blinking effect when FR cast
 		else if (spell == stringFinalResort)
 		{
-			warningController.decayText(3);
-			warningController.stopBlink();
-			warningController.setTextColor(nowColor);
+			warningController.DecayText(3);
+			warningController.StopBlink();
+			warningController.SetTextColor(nowColor);
 		}
 		
 		// play a warning sound for pod casts (audible cue for cleansers)
@@ -622,7 +690,29 @@ class com.theck.ALIA.ALIA
 		}
 	}
 	
-	private function ResetShadowThrottleFlag() { shadowThrottleFlag = true;	}
+	public function BirdCasting(spell) {
+		DebugText("Bird is casting " + spell );
+		DebugText("stringDownfall is " + stringDownfall);
+		
+		// throttling to prevent multi-triggers
+		if ( ( spell == stringDownfall ) && downfallThrottleFlag )
+		{
+			numDownfalls++;
+			downfallThrottleFlag = false;
+			// reset throttle flag after 5 econds (cast is only 2 seconds)
+			setTimeout(Delegate.create(this, ResetDownfallThrottleFlag), 5000);
+			
+			// update display
+			if encounterPhase < 3 {
+				DebugText("numDownfalls is " + numDownfalls );
+				npcDisplay.UpdateDownfallNumber( numDownfalls );
+			}
+		}
+	}
+
+	private function ResetShadowThrottleFlag() { shadowThrottleFlag = true; }
+	
+	private function ResetDownfallThrottleFlag() { downfallThrottleFlag = true; }
 	
 	////////////////////////////////
 	////// Signal Connections //////
@@ -631,16 +721,16 @@ class com.theck.ALIA.ALIA
 	public function LurkerDied() {
 		
 		healthController.UpdateText("Dead");
-		healthController.decayText(10);
+		healthController.DecayText(10);
 		
 		// disconnect lurker signals
 		DisconnectLurkerSignals();
 		lurker = undefined; // probably not needed
 		
 		// decay any remaining message, also stop blinking
-		warningController.decayText(3);
-		warningController.stopBlink();
-		npcDisplay.decayDisplay(3);
+		warningController.DecayText(3);
+		warningController.StopBlink();
+		npcDisplay.DecayDisplay(3);
 	}
 	
 	public function ResetLurker() {
@@ -653,13 +743,14 @@ class com.theck.ALIA.ALIA
 		setTimeout(Delegate.create(this, ConnectVicinitySignals), 3000 );
 		
 		// decay any remaining message, also stop blinking
-		warningController.decayText(3);
-		warningController.stopBlink();
+		warningController.DecayText(3);
+		warningController.StopBlink();
 		
 		// reset accumulators / encounter state variable
 		numBirds = 0;
 		numHulks = 0;
 		numShadows = 0;
+		numDownfalls = 0;
 		encounterPhase = 0;
 		currentBird = undefined;
 		currentHulk = undefined;
@@ -694,21 +785,27 @@ class com.theck.ALIA.ALIA
 		// increment Hulk Counter
 		numHulks++;	
 		
-		// encounter state logic - update to phase 3 if this is the third hulk
-		if ( numHulks > 2 ) { setPhaseState(3, "Hulk #" + numHulks); }
+		// encounter state logic - update to phase 3 if this is the fourth hulk
+		if ( numHulks > 3 ) { SetPhaseState(3, "Hulk #" + numHulks); }
 	}
 	
 	public function BirdDied() {
 		
 		// disconnect signals
 		currentBird.SignalCharacterDied.Disconnect(BirdDied, this);
+		currentBird.SignalCommandStarted.Disconnect(BirdCasting, this);
 		currentBird = undefined; // probably not needed
 		
-		// increment Hulk Counter
+		// increment Bird Counter
 		numBirds++;	
 		
-		// encounter state logic - update to phase 3 if this is the third bird
-		if ( numBirds > 2 ) { setPhaseState(3, "Bird #" + numBirds); }	
+		// reset downfall counter
+		numDownfalls = 0;
+		
+		// encounter state logic - update to phase 3 if this is the third bird, or fourth on Story Mode
+		if ( numBirds > 2 && lurkerEliteLevel > 0 ) || ( numBirds > 3 ) {
+			SetPhaseState(3, "Bird #" + numBirds);
+		}
 	}
 	
 	public function ConnectVicinitySignals() {
@@ -817,7 +914,7 @@ class com.theck.ALIA.ALIA
 		
 		// Set default text
         warningController.UpdateText("A Lurker Is Announced");
-		warningController.decayText(textDecayTime);
+		warningController.DecayText(textDecayTime);
 		healthController.UpdateText("100%");
 		
 		// Call a GuiEdit to update visibility and such
@@ -827,7 +924,7 @@ class com.theck.ALIA.ALIA
 	private function UpdateWarning(text:String)	{
 		// print text to chat, stop any existing blink effects, and update the text field
 		com.GameInterface.UtilsBase.PrintChatText(text);
-		warningController.stopBlink();
+		warningController.StopBlink();
 		warningController.UpdateText(text);
 	}
 	
@@ -835,15 +932,15 @@ class com.theck.ALIA.ALIA
 		// print text to chat, update the text field, schedule decay
 		com.GameInterface.UtilsBase.PrintChatText(text);
 		warningController.UpdateText(text);		
-		warningController.decayText(textDecayTime);
+		warningController.DecayText(textDecayTime);
 	}
 	
 	private function UpdateWarningWithBlink(text:String) {
 		// print text to chat, set color to red, update the text field, start blinking
 		com.GameInterface.UtilsBase.PrintChatText(text);
-		warningController.setTextColor( nowColor );
+		warningController.SetTextColor( nowColor );
 		warningController.UpdateText(text);
-		warningController.blinkText();
+		warningController.BlinkText();
 	}
     
 	private function UpdateNPCStatusDisplay() {
@@ -851,79 +948,90 @@ class com.theck.ALIA.ALIA
 		npcDisplay.UpdateAll(mei.GetStatus(), rose.GetStatus(), alex.GetStatus(), zuberi.GetStatus());
 	}
 	
-    public function warningStartDrag() {
-		DebugText("warningStartDrag called");
+    public function WarningStartDrag() {
+		DebugText("WarningStartDrag called");
         warningController.clip.startDrag();
     }
 
-    public function warningStopDrag() {
-		DebugText("warningStopDrag called");
+    public function WarningStopDrag() {
+		DebugText("WarningStopDrag called");
         warningController.clip.stopDrag();
 		
 		// grab position for config storage on Deactivate()
         w_pos = Common.getOnScreen(warningController.clip); 
 		
-		DebugText("warningStopDrag: x: " + w_pos.x + "  y: " + w_pos.y);
+		DebugText("WarningStopDrag: x: " + w_pos.x + "  y: " + w_pos.y);
     }
 	
-    public function pctHealthStartDrag() {
-		DebugText("pctHealthStartDrag called");
+    public function PctHealthStartDrag() {
+		DebugText("PctHealthStartDrag called");
         healthController.clip.startDrag();
     }
 
-    public function pctHealthStopDrag() {
-		DebugText("pctHealthStopDrag called");
+    public function PctHealthStopDrag() {
+		DebugText("PctHealthStopDrag called");
         healthController.clip.stopDrag();
 		
 		// grab position for config storage on Deactivate()
         h_pos = Common.getOnScreen(healthController.clip); 
 		
-		DebugText("pctHealthStopDrag: x: " + h_pos.x + "  y: " + h_pos.y);
+		DebugText("PctHealthStopDrag: x: " + h_pos.x + "  y: " + h_pos.y);
     }
 	
-    public function npcStartDrag() {
-		DebugText("npcStartDrag called");
+    public function NpcStartDrag() {
+		DebugText("NpcStartDrag called");
         npcDisplay.clip.startDrag();
     }
 
-    public function npcStopDrag() {
-		DebugText("npcStopDrag called");
+    public function NpcStopDrag() {
+		DebugText("NpcStopDrag called");
         npcDisplay.clip.stopDrag();
 		
 		// grab position for config storage on Deactivate()
         n_pos = Common.getOnScreen(npcDisplay.clip); 
 		
-		DebugText("npcStopDrag: x: " + n_pos.x + "  y: " + n_pos.y);
+		DebugText("NpcStopDrag: x: " + n_pos.x + "  y: " + n_pos.y);
     }
 
-    public function GuiEdit(state:Boolean) {
+    public function ShowZuberi():Boolean {
+		if ( Boolean(showZuberi.GetValue()) || lurkerEliteLevel > 10 ) 
+		{
+			return true; 
+		}
+		else 
+		{ 
+			return false;
+		}
+	}
+	
+	public function GuiEdit(state:Boolean) {
 		//DebugText("GuiEdit called");
-		warningController.setVisible(IsNYR());
-		warningController.enableInteraction(false);
-		healthController.setVisible(IsNYR()); 
-		npcDisplay.setVisible(IsNYR(), Boolean(showZuberi.GetValue()));
+		warningController.SetVisible(IsNYR());
+		warningController.EnableInteraction(false);
+		healthController.SetVisible(IsNYR()); 
+		npcDisplay.SetVisible(IsNYR(), encounterPhase, ShowZuberi() );
 		
 		//only editable in NYR
 		if IsNYR() 
 		{
 			if (state) {
 				DebugText("GuiEdit: state true");
-				warningController.clip.onPress = Delegate.create(this, warningStartDrag);
-				warningController.clip.onRelease = Delegate.create(this, warningStopDrag);
+				warningController.clip.onPress = Delegate.create(this, WarningStartDrag);
+				warningController.clip.onRelease = Delegate.create(this, WarningStopDrag);
 				warningController.UpdateText("~~~~~ Move Me!! ~~~~~");
-				warningController.setVisible(true);
-				warningController.setGUIEdit(true);
-				warningController.stopBlink(); // probably unnecessary?
+				warningController.SetVisible(true);
+				warningController.SetGUIEdit(true);
+				warningController.StopBlink(); // probably unnecessary?
 				
-				healthController.clip.onPress = Delegate.create(this, pctHealthStartDrag);
-				healthController.clip.onRelease = Delegate.create(this, pctHealthStopDrag);
+				healthController.clip.onPress = Delegate.create(this, PctHealthStartDrag);
+				healthController.clip.onRelease = Delegate.create(this, PctHealthStopDrag);
 				healthController.UpdateText("100%");
-				healthController.setVisible(true);
-				healthController.setGUIEdit(true);
+				healthController.SetVisible(true);
+				healthController.SetGUIEdit(true);
 				
-				npcDisplay.setGUIEdit(true);
-				npcDisplay.clip.onPress = Delegate.create(this, npcStartDrag);
-				npcDisplay.clip.onRelease = Delegate.create(this, npcStopDrag);
+				npcDisplay.SetGUIEdit(true);
+				npcDisplay.clip.onPress = Delegate.create(this, NpcStartDrag);
+				npcDisplay.clip.onRelease = Delegate.create(this, NpcStopDrag);
 			} 
 			else {
 				DebugText("GuiEdit: state false");
@@ -931,24 +1039,28 @@ class com.theck.ALIA.ALIA
 				warningController.clip.onPress = undefined;
 				warningController.clip.onRelease = undefined;
 				warningController.UpdateText("A Lurker Is Announced");
-				warningController.decayText(textDecayTime);
-				warningController.setGUIEdit(false);
-				warningController.stopBlink(); // probably unnecessary?
+				warningController.DecayText(textDecayTime);
+				warningController.SetGUIEdit(false);
+				warningController.StopBlink(); // probably unnecessary?
 				
 				healthController.clip.stopDrag();
 				healthController.clip.onPress = undefined;
 				healthController.clip.onRelease = undefined;
-				healthController.setGUIEdit(false);
+				healthController.SetGUIEdit(false);
 				
 				npcDisplay.clip.stopDrag();
 				npcDisplay.clip.onPress = undefined;
 				npcDisplay.clip.onRelease = undefined;
-				npcDisplay.setGUIEdit(false);
+				npcDisplay.SetGUIEdit(false);
 			}
 		}
     }
 	
-	// Debugging
+	
+	///////////////////////
+	////// Debugging //////
+	///////////////////////
+	
 	static function DebugText(text) {
 		if (debugMode) Debugger.PrintText(text);
 	}

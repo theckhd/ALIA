@@ -39,13 +39,13 @@ class gui.theck.TextFieldController
 		field.textColor = 0xFFFFFF;
     }
 
-	public function decayText(decayTime) {
-		Debugger.DebugText("decayText called", debugMode);
+	public function DecayText(decayTime) {
+		Debugger.DebugText("DecayText called", debugMode);
 		Tweener.addTween(field, {_alpha : 0, delay : 2, time : decayTime});	
-        //setTimeout(Delegate.create(this, stopBlink), decayTime*1000 + 500);
+        //setTimeout(Delegate.create(this, StopBlink), decayTime*1000 + 500);
 	}
 	
-	public function setPos(pos:Point) {
+	public function SetPos(pos:Point) {
 		// sanitize inputs - this fixes a bug where someone changes screen resolution and suddenly the field is off the visible screen
 		//Debugger.DebugText("pos.x: " + pos.x + "  pos.y: " + pos.y, debugMode);
 		if ( pos.x > Stage.width || pos.x < 0 ) { pos.x = Stage.width / 2; }
@@ -56,31 +56,31 @@ class gui.theck.TextFieldController
 		clip._y = pos.y;
 	}
 	
-	public function getPos() {
+	public function GetPos() {
 		var pos:Point = new Point(clip._x, clip._y);
-		Debugger.DebugText("getPos: x: " + pos.x + "  y: " + pos.y, debugMode);
+		Debugger.DebugText("GetPos: x: " + pos.x + "  y: " + pos.y, debugMode);
 		return pos;
 	}
 	
-	public function setVisible(flag:Boolean) {
+	public function SetVisible(flag:Boolean) {
 		field._visible = flag;	
 	}
 	
-	public function toggleBackground(flag:Boolean) {
+	public function ToggleBackground(flag:Boolean) {
 		field.background = flag;
 	}
 	
-	public function setTextColor(color:Number) {
+	public function SetTextColor(color:Number) {
 		field.textColor = color;
 	}
 	
-	public function setGUIEdit(state:Boolean) {
-		toggleBackground(state);
-		enableInteraction(state);
+	public function SetGUIEdit(state:Boolean) {
+		ToggleBackground(state);
+		EnableInteraction(state);
 	}
 	
-    public function blinkText() {
-		Debugger.DebugText("blinkText called", debugMode);
+    public function BlinkText() {
+		Debugger.DebugText("BlinkText called", debugMode);
 		
 		// clear any existing blinking effects first
         clearInterval(clip.blinkInterval);
@@ -100,13 +100,13 @@ class gui.theck.TextFieldController
         }), 50);
     }
     
-    public function stopBlink() {
-		Debugger.DebugText("stopBlink called", debugMode);
+    public function StopBlink() {
+		Debugger.DebugText("StopBlink called", debugMode);
         clearInterval(clip.blinkInterval);
         clip.transform.colorTransform = new ColorTransform();
     }
 
-	public function enableInteraction(state:Boolean) {
+	public function EnableInteraction(state:Boolean) {
 		clip.hitTestDisable = !state;
 		field.hitTestDisable = !state;
 	}
