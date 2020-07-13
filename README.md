@@ -33,7 +33,7 @@ Currently there are three displays that appear. The displays only appear when in
 
 - An NPC display which changes based on phase
   - Phase 1: Hidden (no NPCs to track)
-  - Phase 2: Shows number of Birds & number of Downfalls cast by current bird
+  - Phase 2: Shows number of Birds (B) & number of Downfalls (D) cast by current bird
   - Phase 3: Displays the status of each NPC as a color-coded letter
     - Also displays warning text for "Podded" and "Doomed" (pod incoming) NPCs.
     - Color codes are:
@@ -44,8 +44,8 @@ Currently there are three displays that appear. The displays only appear when in
       - White: Not providing buff, but no status ailments (i.e. while running back to their spot)
       - Black: NPC not yet detected (usually most of phase 1 & 2)
     - Letters are just M (Mei Ling / Melee), R (Rose / Mid-range), A (Alex / long range), and Z (Zuberi)
-      - Zuberi is turned off by default. If you want to see what he's up to, you can enable him with 
-        - `/setoption alia_zuberi true`
+      - Zuberi is automatically enabled in E17, but disabled by default in other difficulties. 
+      - If you want to see what he's up to, you can enable him with `/setoption alia_zuberi true`
 
 
 The displays can be moved (click & drag) in GUIEdit mode, and save their position between sessions.
