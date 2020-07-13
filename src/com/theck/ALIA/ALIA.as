@@ -373,8 +373,8 @@ class com.theck.ALIA.ALIA
 			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_ps_sound (true/false)\" will enable Personal Space warning sound.");
 			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_pod_sound (true/false)\" will enable From Beneath You It Devours warning sound.");
 			
-			//if debugMode { LurkerDied(); } // stupid hack for debugging only
-			LurkerDied();
+			if debugMode { LurkerDied(); } // stupid hack for debugging only
+			//LurkerDied();
 		}
 		dv.SetValue(false);
 	}
