@@ -34,7 +34,7 @@ class gui.theck.TextFieldController
     public function UpdateText(text) {
 		Debugger.DebugText("UpdateText called", debugMode);
 		Tweener.removeTweens(field);
-        field._alpha = 100;
+        ResetAlpha();
         field.text = text;
 		field.textColor = 0xFFFFFF;
     }
@@ -109,5 +109,9 @@ class gui.theck.TextFieldController
 	public function EnableInteraction(state:Boolean) {
 		clip.hitTestDisable = !state;
 		field.hitTestDisable = !state;
+	}
+	
+	public function ResetAlpha() {
+		field._alpha = 100;
 	}
 }

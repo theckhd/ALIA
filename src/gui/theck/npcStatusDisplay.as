@@ -112,6 +112,7 @@ class gui.theck.npcStatusDisplay
 	}
 	
 	public function SetGUIEdit(state:Boolean) {
+		Debugger.DebugText("NPCSD:SetGUIEdit() called with argument: " + state, debugMode);
 		ToggleBackground(state);
 		EnableInteraction(state);
 		if state {
@@ -127,7 +128,7 @@ class gui.theck.npcStatusDisplay
 		//Debugger.DebugText("UpdateAll()", debugMode);
 		
 		// reappear if we've decayed this
-		Tweener.removeTweens(clip);
+		//ResetAlpha();
 		
 		// update each text field with the appropriate status
 		UpdateLetter(meiLetter, meiStatus);
@@ -175,13 +176,18 @@ class gui.theck.npcStatusDisplay
 	}
 		
 	public function SetVisible(flag:Boolean, phase:Number, zuberiFlag:Boolean) {
-		clip._visible = flag;	
+		Debugger.DebugText("npcStatusDisplay.SetVisible(): flag: " + flag + ", phase: " + phase + ", zuberiFlag: " + zuberiFlag, debugMode);
+		clip._visible = flag;
 		if flag {
 			SetVisibilityByPhase( phase, zuberiFlag );
+		}
+		else {
+			HideAllStatus();
 		}
 	}
 	
 	public function SetVisibilityByPhase( phase:Number, zuberiFlag:Boolean ) {
+		Debugger.DebugText("npcStatusDisplay.SetVisibilityByPhase(): phase: " + phase + ", zuberiFlag: " + zuberiFlag, debugMode);
 		// if phase isn't specified default to 0
 		if (arguments.length == 0) {
 			phase = 0;
@@ -193,9 +199,12 @@ class gui.theck.npcStatusDisplay
 			Debugger.DebugText("npcStatusDisplay.SetVisibilityByPhase(): zuberiFlag defaulted to true", debugMode);
 		}
 		
+		// reset alpha on everything (in case we've killed this before and decayed the text at the end)
+		//ResetAlpha();
+		
 		// if we haven't started yet, show everything
 		if phase < 1 
-		{			
+		{
 			ShowMeiStatus(true);
 			ShowRoseStatus(true);
 			ShowAlexStatus(true);
@@ -205,14 +214,11 @@ class gui.theck.npcStatusDisplay
 		// phase 1: hide all
 		else if phase < 2 
 		{
-			ShowMeiStatus(false);
-			ShowRoseStatus(false);
-			ShowAlexStatus(false);
-			ShowZuberiStatus(false);
+			HideAllStatus();
 		}
 		// in phase 2 mei is used for counting birds and rose ise for counting downfalls
 		else if phase == 2 
-		{			
+		{
 			ShowMeiStatus(true);
 			ShowRoseStatus(true);	
 			meiLetter.text = "B";
@@ -229,8 +235,8 @@ class gui.theck.npcStatusDisplay
 			ShowZuberiStatus(false);
 		}
 		// in phase 3, use default settings
-		else if phase > 2 
-		{			
+		else if phase == 3 
+		{
 			ShowMeiStatus(true);
 			ShowRoseStatus(true);
 			ShowAlexStatus(true);
@@ -240,8 +246,13 @@ class gui.theck.npcStatusDisplay
 			meiLetter.text = "M";
 			roseLetter.text = "R";
 			meiStatusText.text = "";
-			roseStatusText.text = "";	
-		}		
+			roseStatusText.text = "";
+		}
+		else if phase > 3 {
+			// this is all handled in ALIA:Initialize() now.
+			//setTimeout(Delegate.create(this, HideAllStatus), 4000 );
+			//setTimeout(Delegate.create(this, ResetAlpha), 4500 );
+		}
 	}
 	
 	public function UpdateBirdNumber( num:Number ) { meiStatusText.text = String(num); }
@@ -272,7 +283,8 @@ class gui.theck.npcStatusDisplay
 	}
 	
 	public function DecayDisplay(decayTime) {
-		Debugger.DebugText("decayText called", debugMode);
+		Debugger.DebugText("NPSCSD: DecayDisplay()", debugMode);
+		Debugger.DebugText("NPSCSD: DecayDisplay(): meiLetter._alpha = " + meiLetter._alpha, debugMode);
 		Tweener.addTween(meiLetter, {_alpha : 0, delay : 2, time : decayTime});
 		Tweener.addTween(meiStatusText, {_alpha : 0, delay : 2, time : decayTime});
 		Tweener.addTween(roseLetter, {_alpha : 0, delay : 2, time : decayTime});
@@ -281,6 +293,20 @@ class gui.theck.npcStatusDisplay
 		Tweener.addTween(alexStatusText, {_alpha : 0, delay : 2, time : decayTime});
 		Tweener.addTween(zuberiLetter, {_alpha : 0, delay : 2, time : decayTime});
 		Tweener.addTween(zuberiStatusText, {_alpha : 0, delay : 2, time : decayTime});
+	}
+	
+	public function ResetAlpha() {
+		Debugger.DebugText("NPSCSD: ResetAlpha()", debugMode);
+		Debugger.DebugText("NPSCSD: ResetAlpha(): meiLetter._alpha = " + meiLetter._alpha, debugMode);
+		meiLetter._alpha = 100;
+		meiStatusText._alpha = 100;
+		roseLetter._alpha = 100;
+		roseStatusText._alpha = 100;
+		alexLetter._alpha = 100;
+		alexStatusText._alpha = 100;
+		zuberiLetter._alpha = 100;
+		zuberiStatusText._alpha = 100;
+		Debugger.DebugText("NPSCSD: ResetAlpha(): meiLetter._alpha = " + meiLetter._alpha, debugMode);
 	}
 	
 	
@@ -302,5 +328,13 @@ class gui.theck.npcStatusDisplay
 	public function ShowZuberiStatus(flag:Boolean) {
 		zuberiLetter._visible = flag;
 		zuberiStatusText._visible = flag;
+	}
+	
+	public function HideAllStatus() {
+		Debugger.DebugText("NPSCSD: HIdeAllStatus()", debugMode);
+		ShowMeiStatus(false);
+		ShowRoseStatus(false);
+		ShowAlexStatus(false);
+		ShowZuberiStatus(false);
 	}
 }
