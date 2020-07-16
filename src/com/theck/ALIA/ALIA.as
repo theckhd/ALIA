@@ -219,7 +219,7 @@ class com.theck.ALIA.ALIA
 				npcDisplay.ResetAlpha();
 				
 				// delay encounter state variable reset to deal with stupid GUIEdit Signals
-				setTimeout(Delegate.create(this, ResetEncounterState), 3000);
+				//setTimeout(Delegate.create(this, ResetEncounterState), 10000);
 			}
 			// otherwise we just zoned in or wiped, so prepare for the next attempt
 			else 
