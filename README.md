@@ -20,7 +20,7 @@ Currently there are three displays that appear. The displays only appear when in
 
 - A warning display
   - Displays warnings for the following casts:
-    - Shadow from Below (first one only, at 75%)
+    - Shadow from Beyond (first one only, at 75%)
     - Personal Space (67%, 45%, 25%)
     - Final Resort (3%)
   - Also displays a "coming soon" warning before the cast threshold (3% ahead by default, user-configurable)
