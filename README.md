@@ -51,7 +51,7 @@ Currently there are three displays that appear. The displays only appear when in
 
 The displays can be moved (click & drag) in GUIEdit mode, and save their position between sessions.
 
-![Screenshot in GUIEdit Mode](screens/alia_guiedit.png)
+![Screenshot in GUIEdit Mode](screens/alia_guiedit_new.png)
 
 ## Installation
 
