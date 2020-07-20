@@ -5,13 +5,11 @@
 import caurina.transitions.Tweener;
 import flash.geom.Point;
 import com.theck.Utils.Debugger;
-//import flash.geom.ColorTransform;
-//import mx.utils.Delegate;
 
 class gui.theck.npcStatusDisplay
 {
 	// toggle debug messages
-	static var debugMode = false;
+	static var debugMode:Boolean = false;
 	
 	// status colors: White (running), Green (buffing), Gray (incapacitated), Yellow (pod inc), Red (podded)
 	static var statusColors:Array = new Array(0xFFFFFF, 0x008000, 0xA4A4A4, 0xFFC300 , 0xFF0000);
@@ -30,22 +28,35 @@ class gui.theck.npcStatusDisplay
 	static var textSize:Number = 30;
 	static var boxSize:Number = textSize * 1.35;
 	static var statusTextWidth:Number = textSize * 4;
+	static var letterWidthMultiplier:Number = 2.35;
 	
-	public function npcStatusDisplay(target:MovieClip) 
+	private var letterWidth:Number = boxSize;
+	private var letterOffset:Number = 0;
+	
+	private var showFullNPCNames:Boolean;
+	
+	public function npcStatusDisplay(target:MovieClip, fullNPCs:Boolean) 
 	{
 		clip = target.createEmptyMovieClip("npcStatusDisplay", target.getNextHighestDepth());
         clip._x = Stage.width /  2;
         clip._y = Stage.height / 2;
 		
-		meiLetter = clip.createTextField("mei", clip.getNextHighestDepth(), 0, 0, boxSize, boxSize);
-		roseLetter = clip.createTextField("rose", clip.getNextHighestDepth(), 0, boxSize, boxSize, boxSize);
-        alexLetter = clip.createTextField("alex", clip.getNextHighestDepth(), 0, 2*boxSize, boxSize, boxSize);
-		zuberiLetter = clip.createTextField("zuberi", clip.getNextHighestDepth(), 0, 3*boxSize, boxSize, boxSize);
+		showFullNPCNames = fullNPCs;
 		
-		InitializeLetter(meiLetter);
-		InitializeLetter(roseLetter);
-		InitializeLetter(alexLetter);
-		InitializeLetter(zuberiLetter);
+		if showFullNPCNames {
+			letterWidth = textSize * letterWidthMultiplier;
+			letterOffset = textSize * ( -1 );
+		}
+		
+		meiLetter = clip.createTextField("mei", clip.getNextHighestDepth(), letterOffset, 0, letterWidth, boxSize);
+		roseLetter = clip.createTextField("rose", clip.getNextHighestDepth(), letterOffset, boxSize, letterWidth, boxSize);
+        alexLetter = clip.createTextField("alex", clip.getNextHighestDepth(), letterOffset, 2*boxSize, letterWidth, boxSize);
+		zuberiLetter = clip.createTextField("zuberi", clip.getNextHighestDepth(), letterOffset, 3*boxSize, letterWidth, boxSize);
+		
+		InitializeLetter(meiLetter, showFullNPCNames);
+		InitializeLetter(roseLetter, showFullNPCNames);
+		InitializeLetter(alexLetter, showFullNPCNames);
+		InitializeLetter(zuberiLetter, showFullNPCNames);
 		
 		meiStatusText = clip.createTextField("meiStatus", clip.getNextHighestDepth(), boxSize, 0, statusTextWidth, boxSize);
 		roseStatusText = clip.createTextField("roseStatus", clip.getNextHighestDepth(), boxSize, boxSize, statusTextWidth, boxSize);
@@ -58,7 +69,45 @@ class gui.theck.npcStatusDisplay
 		InitializeStatusText(zuberiStatusText);
 	}
 	
-	public function InitializeLetter(field:TextField) {	
+	public function ChangeLetterMode(newState:Boolean) {
+		
+		if ( showFullNPCNames && !newState ) {
+			// set letterOffset to 0 and letterWidth to boxSize
+			letterOffset = 0;
+			letterWidth = boxSize;
+		}
+		else if ( !showFullNPCNames && newState ) {
+			// set letterOffset & letterWidth
+			letterOffset = textSize * ( -1 );
+			letterWidth = textSize * letterWidthMultiplier;
+		}
+		
+		showFullNPCNames = newState;
+		
+		// set all x values to letterOffset
+		meiLetter._x = letterOffset;
+		roseLetter._x = letterOffset;
+		alexLetter._x = letterOffset;
+		zuberiLetter._x = letterOffset;
+		
+		// set all width values to letterWidth
+		meiLetter._width = letterWidth;
+		roseLetter._width = letterWidth;
+		alexLetter._width = letterWidth;
+		zuberiLetter._width = letterWidth;
+				
+		// reinitialize text
+		InitializeAllLetters(newState);
+	}
+	
+	public function InitializeAllLetters(fullNPCs:Boolean) {
+		InitializeLetter(meiLetter, fullNPCs);
+		InitializeLetter(roseLetter, fullNPCs);
+		InitializeLetter(alexLetter, fullNPCs);
+		InitializeLetter(zuberiLetter, fullNPCs);
+	}
+	
+	public function InitializeLetter(field:TextField, fullNPCs:Boolean) {	
 		
         var textFormat:TextFormat = new TextFormat("_StandardFont", textSize,0xFFFFFF, true);
         textFormat.align = "center"	
@@ -69,20 +118,25 @@ class gui.theck.npcStatusDisplay
 		field.backgroundColor = 0x000000;
 		//field.border = true;
 		
+		SetLetterText(field, fullNPCs);	
+	}
+	
+	private function SetLetterText(field:TextField, fullNPCs:Boolean) {
 		switch (field._name) {
 			case "mei":
-				field.text = "M";
+				field.text = ( fullNPCs ? "Mei" : "M" );
 				break;
 			case "rose":
-				field.text = "R";
+				field.text = ( fullNPCs ? "Rose" : "R" );
 				break;
 			case "alex":
-				field.text = "A";
+				field.text = ( fullNPCs ? "Alex" : "A" );
 				break;
 			case "zuberi":
-				field.text = "Z";
+				field.text = ( fullNPCs ? "Zub" : "Z" );
 				break;		
-		}		
+		}	
+		
 	}
 	
 	public function InitializeStatusText(field:TextField) {
@@ -221,8 +275,8 @@ class gui.theck.npcStatusDisplay
 		{
 			ShowMeiStatus(true);
 			ShowRoseStatus(true);	
-			meiLetter.text = "B";
-			roseLetter.text = "D";
+			meiLetter.text = ( showFullNPCNames ? "Bird" : "B" );
+			roseLetter.text = ( showFullNPCNames ? "DF" : "D" );
 			UpdateBirdNumber( 0 );
 			UpdateDownfallNumber( 0 );
 			meiLetter.textColor = statusColors[ 0 ];
@@ -243,15 +297,18 @@ class gui.theck.npcStatusDisplay
 			ShowZuberiStatus(zuberiFlag);
 			
 			// reset text fields to phase 3 values
-			meiLetter.text = "M";
-			roseLetter.text = "R";
+			SetLetterText(meiLetter, showFullNPCNames);
+			SetLetterText(roseLetter, showFullNPCNames);
 			meiStatusText.text = "";
 			roseStatusText.text = "";
 		}
-		else if phase > 3 {
-			// this is all handled in ALIA:Initialize() now.
-			//setTimeout(Delegate.create(this, HideAllStatus), 4000 );
-			//setTimeout(Delegate.create(this, ResetAlpha), 4500 );
+		else if phase > 3 
+		{			
+			// reset text fields to phase 0 values
+			SetLetterText(meiLetter, showFullNPCNames);
+			SetLetterText(roseLetter, showFullNPCNames);
+			meiStatusText.text = "";
+			roseStatusText.text = "";
 		}
 	}
 	

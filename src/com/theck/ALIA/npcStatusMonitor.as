@@ -10,7 +10,7 @@ import com.Utils.LDBFormat;
 class com.theck.ALIA.npcStatusMonitor
 {
 	// toggle debug messages
-	static var debugMode = false;
+	static var debugMode:Boolean = false;
 	
 	public var char:Character;
 	public var state:Number;

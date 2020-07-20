@@ -4,14 +4,9 @@
 */
 
 import com.GameInterface.DistributedValue;
-//import com.theck.ALIA.GetHealthPercent;
-//import com.theck.ALIA.LurkerCasting;
 import com.GameInterface.Game.Character;
 import com.GameInterface.Game.Dynel;
 import com.GameInterface.VicinitySystem;
-//import com.GameInterface.UtilsBase;
-//import com.GameInterface.ProjectUtilsBase;
-//import com.Utils.WeakList;
 import com.Utils.ID32;
 import com.Utils.Archive;
 import com.Utils.LDBFormat;
@@ -45,20 +40,23 @@ class com.theck.ALIA.ALIA
 	static var bird112_SM:Number = 37266; // The two in SM parking garage are 32407 
 	static var bird112_E1:Number = 32452;
 	static var bird112_E5:Number = 37258;
-	static var bird112_E10:Number = 35482; 
-	static var bird112_E17:Number = 37297; // Guess, other possibilites: 37298, 37299
+	static var bird112_E10:Number = 35482; // same on E10 & E17.
+	//static var bird112_E17:Number = 37297; // Guess, other possibilites: 37298, 37299
 	static var hulk112_E5:Number = 37333; 
 	static var hulk112_E10:Number = 35899; // Will have to check E17 when it drops; there's no other Zero-Point Titan entry in localizations
+	static var hulk112_E17:Number = 38370; // Will have to check E17 when it drops; there's no other Zero-Point Titan entry in localizations
 	static var textDecayTime:Number = 10;
 	static var nowColor:Number = 0xFF0000;
 	
-/*	These aren't needed right now, just here for reference
-	static var lurkerMaxHealthSM  =  3262582;
+	// These aren't needed right now, just here for reference
+	/*static var lurkerMaxHealthSM  =  3262582;
 	static var lurkerMaxHealthE1  =  3262582;
-	static var lurkerMaxHealthE5  = 11140440;
+	static var lurkerMaxHealthE5  = 11140440;*/
+	
 	static var lurkerMaxHealthE10 = 35158992;
-	static var lurkerMaxHealthE17 = 50000000; //absurd value until E17 is released
-*/
+	
+	//static var lurkerMaxHealthE17 = 68940936; // checked 7/17 open beta
+
 	
 	// character variables
 	public var m_player:Character;
@@ -120,6 +118,8 @@ class com.theck.ALIA.ALIA
 	private var personalSound:DistributedValue;
 	private var fromBeneathSound:DistributedValue;
 	private var showSlashCommands:DistributedValue;
+	private var showNPCNames:DistributedValue;
+	private var debuggingHack:DistributedValue;
 
 	//////////////////////////////
 	////// Addon Management //////
@@ -265,7 +265,11 @@ class com.theck.ALIA.ALIA
 		showZuberi = DistributedValue.Create("alia_zuberi");
 		personalSound = DistributedValue.Create("alia_ps_sound");
 		fromBeneathSound = DistributedValue.Create("alia_pod_sound");
+		showNPCNames = DistributedValue.Create("alia_shownames");
+		
+		// new options get added above this line
 		showSlashCommands = DistributedValue.Create("alia_options");
+		debuggingHack = DistributedValue.Create("alia_debug");
 	}
 	
 	private function ConnetOptionsSignals() {
@@ -275,7 +279,11 @@ class com.theck.ALIA.ALIA
 		showZuberi.SignalChanged.Connect(SettingsChanged, this);
 		personalSound.SignalChanged.Connect(SettingsChanged, this);
 		fromBeneathSound.SignalChanged.Connect(SettingsChanged, this);
+		showNPCNames.SignalChanged.Connect(SettingsChanged, this);
+		
+		// new options get added above this line
 		showSlashCommands.SignalChanged.Connect(AnnounceSlashCommands, this);
+		debuggingHack.SignalChanged.Connect(DebuggingHack, this);
 	}
 	
 	private function DisconnetOptionsSignals() {
@@ -285,7 +293,11 @@ class com.theck.ALIA.ALIA
 		showZuberi.SignalChanged.Disconnect(SettingsChanged, this);
 		personalSound.SignalChanged.Disconnect(SettingsChanged, this);
 		fromBeneathSound.SignalChanged.Disconnect(SettingsChanged, this);
+		showNPCNames.SignalChanged.Disconnect(SettingsChanged, this);		
+		
+		// new options get added above this line
 		showSlashCommands.SignalChanged.Disconnect(AnnounceSlashCommands, this);
+		debuggingHack.SignalChanged.Disconnect(DebuggingHack, this);
 	}
 	
 	private function ActivateOptions(config:Archive) {
@@ -306,6 +318,10 @@ class com.theck.ALIA.ALIA
 		showZuberi.SetValue( config.FindEntry("alia_showZuberi", false));
 		personalSound.SetValue( config.FindEntry("alia_personalSound", true));
 		fromBeneathSound.SetValue( config.FindEntry("alia_fromBeneathSound", true));
+		showNPCNames.SetValue( config.FindEntry("alia_showNPCNames", false));
+		
+		// new options get added above this line
+		debuggingHack.SetValue( false );
 		showSlashCommands.SetValue( false );
 	}
 	
@@ -323,6 +339,7 @@ class com.theck.ALIA.ALIA
 		config.AddEntry("alia_showZuberi", showZuberi.GetValue());
 		config.AddEntry("alia_personalSound", personalSound.GetValue());
 		config.AddEntry("alia_fromBeneathSound", fromBeneathSound.GetValue());
+		config.AddEntry("alia_showNPCNames", showNPCNames.GetValue());
 		
 		return config
 	}
@@ -352,6 +369,11 @@ class com.theck.ALIA.ALIA
 			fromBeneathSound = dv;
 			if ( loadFinished && fromBeneathSound.GetValue() ) { PlayFromBeneathWarningSound(); };
 			break;
+		case "alia_shownames":
+			showNPCNames = dv;
+			npcDisplay.ChangeLetterMode(showNPCNames.GetValue());
+			GuiEdit();
+			break;
 		}
 		
 		AnnounceSettings(loadFinished);
@@ -359,7 +381,7 @@ class com.theck.ALIA.ALIA
 	
 	public function AnnounceSettings(override:Boolean) {
 		if ( debugMode || override || ( announceSettingsBool && IsNYR() ) )  {
-			com.GameInterface.UtilsBase.PrintChatText("ALIA:" + ( IsNYR() ? " NYR Detected." : "" ) + " Warning setting is " + pct_warning.GetValue() + '%, Zuberi is ' + ( showZuberi.GetValue() ? "shown" : "hidden" ) + ". Sound alert for Personal Space " + ( personalSound.GetValue() ? "enabled" : "disabled" ) + ". Sound alert for Pod cast " + ( fromBeneathSound.GetValue() ? "enabled" : "disabled" ) + "." );
+			com.GameInterface.UtilsBase.PrintChatText("ALIA:" + ( IsNYR() ? " NYR Detected." : "" ) + " Warning setting is " + pct_warning.GetValue() + '%, Zuberi is ' + ( showZuberi.GetValue() ? "shown" : "hidden" ) + ". Sound alert for Personal Space " + ( personalSound.GetValue() ? "enabled" : "disabled" ) + ". Sound alert for Pod cast " + ( fromBeneathSound.GetValue() ? "enabled" : "disabled" ) + ". NPC names are " + ( showNPCNames.GetValue() ? "shown" : "abbreviated" ) + "." );
 			com.GameInterface.UtilsBase.PrintChatText("ALIA: Type \"/option alia_options true\" to see slash commands.");
 			announceSettingsBool = false; // only resets on Load() or SettingsChanged()
 		}
@@ -370,13 +392,19 @@ class com.theck.ALIA.ALIA
 		if dv.GetValue() {
 			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_warnpct #\" will change the warning threshold to #%.");
 			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_zuberi (true/false)\" will toggle Zuberi display.");
+			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_shownames (true/false)\" will toggle full NPC names.");
 			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_ps_sound (true/false)\" will enable Personal Space warning sound.");
 			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_pod_sound (true/false)\" will enable From Beneath You It Devours warning sound.");
 			
-			if debugMode { LurkerDied(); } // stupid hack for debugging only
-			//LurkerDied();
 		}
 		dv.SetValue(false);
+	}
+	
+	private function DebuggingHack():Void {
+		// stupid hack for debugging purposes only
+		if debugMode { 
+			LurkerDied(); 			
+		} 
 	}
 	
 	/////////////////////////////
@@ -421,7 +449,7 @@ class com.theck.ALIA.ALIA
 		SetEncounterState( 0, "ResetEncounterState()");
 	}
 	
-	public function GetLurkerEliteLevel( lurker112:Number ):Number {
+	public function GetLurkerEliteLevel( lurker112:Number, lurkerMaxHealth:Number ):Number {
 		
 		var elevel:Number = 0; // default to story mode
 		
@@ -446,10 +474,13 @@ class com.theck.ALIA.ALIA
 				break;
 			default:
 				elevel = 0;
-				DebugText("Lurker 112 unknown, default to story modde");
+				DebugText("Lurker 112 unknown, default to story mode");
 				break;
 		}
-		DebugText("GetLurkerEliteLevel(): Lurker found to be elevel = " + elevel + " (dynel112: " + lurker112 + ")");
+		if ( elevel == 10 && lurkerMaxHealth > lurkerMaxHealthE10 ) {
+			elevel = 17;
+		}
+		DebugText("GetLurkerEliteLevel(): Lurker found to be elevel = " + elevel + " (dynel112: " + lurker112 + ", max health: " + lurkerMaxHealth + ")");
 		return elevel;
 	}
 	
@@ -509,7 +540,7 @@ class com.theck.ALIA.ALIA
 			updateHealthDisplay = true;
 			
 			// attempt to set difficulty level
-			lurkerEliteLevel = GetLurkerEliteLevel(dynel112);
+			lurkerEliteLevel = GetLurkerEliteLevel(dynel112, lurker.GetStat(1, 1) );
 		}
 		
 		// attempt to grab helpful NPCs only under certain conditions (to try and avoid entrance grab)
@@ -548,7 +579,7 @@ class com.theck.ALIA.ALIA
 		}
 		
 		// Hulks only show up in phase 2, use them for encounter state detection
-		if ( dynel112 == hulk112_E5 || dynel112 == hulk112_E10 ) {
+		if ( dynel112 == hulk112_E5 || dynel112 == hulk112_E10 || dynel112 == hulk112_E17 ) {
 			DebugText("DetectNPCs(): Detected " + dynel.GetName() + " #" + ( numHulks + 1 ) + ", id: " + dynel112 );	
 			
 			// grab hulk and store until dead
@@ -560,7 +591,7 @@ class com.theck.ALIA.ALIA
 		}
 		
 		// Birds only show up in phase 2, use them for encounter state detection. Each difficulty has a different id, because why the hell not.
-		if ( dynel112 == bird112_SM || dynel112 == bird112_E1 || dynel112 == bird112_E5 || dynel112 == bird112_E10 || dynel112 == bird112_E17 ) {
+		if ( dynel112 == bird112_SM || dynel112 == bird112_E1 || dynel112 == bird112_E5 || dynel112 == bird112_E10 ) {
 			DebugText("DetectNPCs(): Detected " + dynel.GetName() + " #" + ( numBirds +1 ) + ", id: " + dynel112 );	
 			
 			// grab bird and store until dead
@@ -684,14 +715,14 @@ class com.theck.ALIA.ALIA
 			}
 				
 			// Final Resort at 1757950 (5%) -  this seems to happen between 2.5% and 3% on Story Mode, but who cares about story mode anyway
-			if (ann_FR_Soon && pct < ( pct_FR_Now + pct_warning.GetValue() / 100 ) ) 
+			if (ann_FR_Soon && pct < ( (lurkerEliteLevel == 0 ? pct_FR_Now / 2 : pct_FR_Now ) + pct_warning.GetValue() / 100 ) ) 
 			{
-				UpdateWarning("Final Resort Soon (5%)");
+				UpdateWarning("Final Resort Soon (" + (lurkerEliteLevel == 0 ? "2.5" : "5" ) + "%)");
 				ann_FR_Soon = false;				
 			}
-			else if (ann_FR_Now && pct < pct_FR_Now ) 
+			else if (ann_FR_Now && pct < (lurkerEliteLevel == 0 ? pct_FR_Now / 2 : pct_FR_Now ) ) 
 			{
-				UpdateWarningWithBlink("Final Resort Now! (5%)"); 
+				UpdateWarningWithBlink("Final Resort Now! (" + (lurkerEliteLevel == 0 ? "2.5" : "5" ) + "%)"); 
 				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
 				ann_FR_Now = false;			
 			}
@@ -965,7 +996,7 @@ class com.theck.ALIA.ALIA
 		
 		// if the NPC display doesn't already exist, create one
 		if !npcDisplay {
-			npcDisplay = new npcStatusDisplay(m_swfRoot);
+			npcDisplay = new npcStatusDisplay(m_swfRoot, showNPCNames.GetValue());
 			DebugText("NPC Status Display created");
 		}
 		
@@ -977,6 +1008,14 @@ class com.theck.ALIA.ALIA
 		// Call a GuiEdit to update visibility and such
         GuiEdit();
     }
+	
+	public function DestroyGUIElements() {
+		DebugText("DestroyGUIElements()");
+		
+		warningController = undefined;
+		healthController = undefined;
+		npcDisplay = undefined;		
+	}
 	
 	private function UpdateWarning(text:String)	{
 		// print text to chat, stop any existing blink effects, and update the text field

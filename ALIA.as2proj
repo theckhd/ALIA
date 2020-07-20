@@ -55,7 +55,10 @@
 xcopy "$(ProjectDir)\src\mod\*.*" "D:\Secret World Legends\Data\Gui\Custom\Flash\ALIA\*.*" /e /y
 
 xcopy "$(ProjectDir)\bin\*.*" "./deployment/ALIA/*.*" /e /y
-xcopy "$(ProjectDir)\src\mod\*.*" "./deployment/ALIA/*.*" /e /y</postBuildCommand>
+xcopy "$(ProjectDir)\src\mod\*.*" "./deployment/ALIA/*.*" /e /y
+
+xcopy "$(ProjectDir)\bin\*.*" "D:\Secret World Legends - Testlive\Data\Gui\Custom\Flash\ALIA\*.*" /e /y
+xcopy "$(ProjectDir)\src\mod\*.*" "D:\Secret World Legends - Testlive\Data\Gui\Custom\Flash\ALIA\*.*" /e /y</postBuildCommand>
   <!-- Other project options -->
   <options>
     <option showHiddenPaths="False" />
