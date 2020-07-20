@@ -22,7 +22,7 @@ Currently there are three displays that appear. The displays only appear when in
   - Displays warnings for the following casts:
     - Shadow from Beyond (first one only, at 75%)
     - Personal Space (67%, 45%, 25%)
-    - Final Resort (3%)
+    - Final Resort (2.5% on Story Mode, 5% on all elite difficulties)
   - Also displays a "coming soon" warning before the cast threshold (3% ahead by default, user-configurable)
   - These warnings fade out quickly when the spell is cast
  
@@ -34,7 +34,7 @@ Currently there are three displays that appear. The displays only appear when in
 - An NPC display which changes based on phase
   - Phase 1: Hidden (no NPCs to track)
   - Phase 2: Shows number of Birds (B) & number of Downfalls (D) cast by current bird
-  - Phase 3: Displays the status of each NPC as a color-coded letter
+  - Phase 3: Displays the status of each NPC as a color-coded letter (or optionally, name)
     - Also displays warning text for "Podded" and "Doomed" (pod incoming) NPCs.
     - Color codes are:
       - Green: Providing Buff
@@ -44,6 +44,7 @@ Currently there are three displays that appear. The displays only appear when in
       - White: Not providing buff, but no status ailments (i.e. while running back to their spot)
       - Black: NPC not yet detected (usually most of phase 1 & 2)
     - Letters are just M (Mei Ling / Melee), R (Rose / Mid-range), A (Alex / long range), and Z (Zuberi)
+      - If you want full names ("Mei", "Rose", "Alex", and "Zub"), enable them with `/setoption alia_shownames true`
       - Zuberi is automatically enabled in E17, but disabled by default in other difficulties. 
       - If you want to see what he's up to, you can enable him with `/setoption alia_zuberi true`
 
