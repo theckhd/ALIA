@@ -44,7 +44,7 @@ Currently there are three displays that appear. The displays only appear when in
       - White: Not providing buff, but no status ailments (i.e. while running back to their spot)
       - Black: NPC not yet detected (usually most of phase 1 & 2)
     - Letters are just M (Mei Ling / Melee), R (Rose / Mid-range), A (Alex / AR range), and Z (Zuberi)
-      - `/setoption alia_shownames true` will enable full anames ("Mei", "Rose", "Alex", and "Zub")
+      - `/setoption alia_shownames true` will enable full names ("Mei", "Rose", "Alex", and "Zub")
       - Zuberi is automatically enabled in E17, but disabled by default in other difficulties. 
       - If you want to see what he's up to, you can enable him with `/setoption alia_zuberi true`
 
