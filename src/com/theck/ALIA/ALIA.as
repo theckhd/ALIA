@@ -3,6 +3,11 @@
 * @author theck
 */
 
+import com.GameInterface.Game.Raid;
+import com.GameInterface.Game.Team;
+import com.GameInterface.Game.TeamInterface;
+import com.GameInterface.UtilsBase;
+
 import com.GameInterface.DistributedValue;
 import com.GameInterface.Game.Character;
 import com.GameInterface.Game.Dynel;
@@ -11,6 +16,7 @@ import com.Utils.ID32;
 import com.Utils.Archive;
 import com.Utils.LDBFormat;
 import com.Utils.GlobalSignal;
+import com.theck.ALIA.playerDebuffChecker;
 import com.theck.Utils.Common;
 import com.theck.Utils.Debugger;
 import com.theck.ALIA.npcStatusMonitor;
@@ -43,17 +49,17 @@ class com.theck.ALIA.ALIA
 	static var bird112_E10:Number = 35482; // same on E10 & E17.
 	//static var bird112_E17:Number = 37297; // Guess, other possibilites: 37298, 37299
 	static var hulk112_E5:Number = 37333; 
-	static var hulk112_E10:Number = 35899; // Will have to check E17 when it drops; there's no other Zero-Point Titan entry in localizations
-	static var hulk112_E17:Number = 38370; // Will have to check E17 when it drops; there's no other Zero-Point Titan entry in localizations
+	static var hulk112_E10:Number = 35899; 
+	static var hulk112_E17:Number = 38370; 
 	static var textDecayTime:Number = 10;
 	static var nowColor:Number = 0xFF0000;
 	
-	// These aren't needed right now, just here for reference
+	// These aren't needed right now, just here for reference. Values from live (pre-patch)
 	/*static var lurkerMaxHealthSM  =  3262582;
 	static var lurkerMaxHealthE1  =  3262582;
 	static var lurkerMaxHealthE5  = 11140440;*/
 	
-	static var lurkerMaxHealthE10 = 35158992;
+	static var lurkerMaxHealthE10 = 35158992; // new value: 43199824 checked 7/19 open beta
 	
 	//static var lurkerMaxHealthE17 = 68940936; // checked 7/17 open beta
 
@@ -78,6 +84,7 @@ class com.theck.ALIA.ALIA
 	private var healthController:TextFieldController;
 	private var updateHealthDisplay:Boolean;
 	private var npcDisplay:npcStatusDisplay;
+	private var playerDebuffController:playerDebuffChecker;
 	private var guiEditThrottle:Boolean = true;
 	
 	// logic flags and accumulators
@@ -92,7 +99,8 @@ class com.theck.ALIA.ALIA
 	private var ann_FR_Soon:Boolean;
 	private var ann_FR_Now:Boolean;
 	private var announceSettingsBool:Boolean;
-	private var personalSoundAlreadyPlaying:Boolean = false;
+	private var personalNowSoundAlreadyPlaying:Boolean = false;
+	private var personalSoonSoundAlreadyPlaying:Boolean = false;
 	private var fromBeneathSoundAlreadyPlaying:Boolean = false;
 	private var loadFinished = false;
 	private var encounterPhase:Number;
@@ -137,7 +145,7 @@ class com.theck.ALIA.ALIA
 		DebugText("Debug mode enabled");
 		
 		// grab character
-		m_player = Character.GetClientCharacter();	
+		m_player = Character.GetClientCharacter();
 		
 		//create text field, connect to GuiEdit
 		CreateGuiElements();
@@ -363,7 +371,7 @@ class com.theck.ALIA.ALIA
 			break;
 		case "alia_ps_sound":
 			personalSound = dv;
-			if (loadFinished && personalSound.GetValue() ) { PlayPersonalSpaceWarningSound(); };
+			if (loadFinished && personalSound.GetValue() ) { PlayPersonalSpaceNowWarningSound(); };
 			break;
 		case "alia_pod_sound":
 			fromBeneathSound = dv;
@@ -402,9 +410,23 @@ class com.theck.ALIA.ALIA
 	
 	private function DebuggingHack():Void {
 		// stupid hack for debugging purposes only
-		if debugMode { 
-			LurkerDied(); 			
+		if ( debugMode && debuggingHack.GetValue() ){ 
+			
+			//PlayPersonalSpaceSoonWarningSound();
+			//setTimeout(Delegate.create(this, PlayPersonalSpaceNowWarningSound), 5000);	
+		
+			playerDebuffController.CheckForDebuffs();
+			//var team:Team = TeamInterface.GetClientTeamInfo();
+			//for (var i in team.m_TeamMembers)
+			//{
+				//var teamMember = team.m_TeamMembers[i];
+				//DebugText(Character.GetCharacter(teamMember["m_CharacterId"]).GetName());
+			//}
+			//UtilsBase.PrintChatText(LDBFormat.LDBGetText(50210, 9463770));
+			
+			// do not put code below this line
 		} 
+		debuggingHack.SetValue( false );
 	}
 	
 	/////////////////////////////
@@ -658,8 +680,8 @@ class com.theck.ALIA.ALIA
 				updateHealthDisplay = false;
 				setTimeout(Delegate.create(this, ResetUpdateHealthDisplayFlag), 250 );
 			}
-			if ( encounterPhase < 1 && pct < 0.99 ) { 
-				AdvanceEncounterState(1, "lurker health below 99%");
+			if ( encounterPhase < 1 && pct < 0.995 ) { 
+				AdvanceEncounterState(1, "lurker health below 99.5%");
 			}
 			
 			// Shadow Incoming at 26369244 (75%)
@@ -678,39 +700,42 @@ class com.theck.ALIA.ALIA
 			// Limit to phase 3 b/c it's possible to push lurker past 67% + pct_warning in phase 1 and have annoying messages during phase 2.
 			if ( ann_PS1_Soon && ( encounterPhase > 2 ) && IsNYR10() && pct < ( pct_PS1_Now + pct_warning.GetValue() / 100 ) ) 
 			{
-				UpdateWarning("Personal Space Soon (67%)");	
+				UpdateWarning("Personal Space Soon (67%)");
+				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceSoonWarningSound(); }
 				ann_PS1_Soon = false;
 			}
 			else if ( ann_PS1_Now && ( encounterPhase > 2 ) && IsNYR10() && pct < pct_PS1_Now ) 
 			{
 				UpdateWarningWithBlink("Personal Space Now! (67%)"); 
-				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
+				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceNowWarningSound(); }
 				ann_PS1_Now = false;
 			}
 			
 			// Second Personal Space at 15821546 (45%)
 			else if ( ann_PS2_Soon && IsNYR10() && pct < ( pct_PS2_Now + pct_warning.GetValue() / 100 ) ) 
 			{
-				UpdateWarning("Personal Space Soon (45%)");	
+				UpdateWarning("Personal Space Soon (45%)");
+				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceSoonWarningSound(); }
 				ann_PS2_Soon = false;
 			}
 			else if ( ann_PS2_Now && IsNYR10() && pct < pct_PS2_Now ) 
 			{
 				UpdateWarningWithBlink("Personal Space Now! (45%)"); 
-				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
+				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceNowWarningSound(); }
 				ann_PS2_Now = false;
 			}
 			
 			// Third Personal Space at 8789478 (25%)
 			else if ( ann_PS3_Soon && IsNYR10() && pct < ( pct_PS3_Now + pct_warning.GetValue() / 100 ) ) 
 			{
-				UpdateWarning("Personal Space Soon (25%)");	
+				UpdateWarning("Personal Space Soon (25%)");
+				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceSoonWarningSound(); }
 				ann_PS3_Soon = false;		
 			}
 			else if (ann_PS3_Now && IsNYR10() && pct < pct_PS3_Now ) 
 			{
 				UpdateWarningWithBlink("Personal Space 3 Now! (25%)");
-				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
+				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceNowWarningSound(); }
 				ann_PS3_Now = false;
 			}
 				
@@ -723,7 +748,7 @@ class com.theck.ALIA.ALIA
 			else if (ann_FR_Now && pct < (lurkerEliteLevel == 0 ? pct_FR_Now / 2 : pct_FR_Now ) ) 
 			{
 				UpdateWarningWithBlink("Final Resort Now! (" + (lurkerEliteLevel == 0 ? "2.5" : "5" ) + "%)"); 
-				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceWarningSound(); }
+				if (Boolean(personalSound.GetValue())) { PlayPersonalSpaceNowWarningSound(); }
 				ann_FR_Now = false;			
 			}
 		}
@@ -775,6 +800,10 @@ class com.theck.ALIA.ALIA
 		else if (spell == stringFromBeneath )
 		{
 			if (Boolean(fromBeneathSound.GetValue())) { PlayFromBeneathWarningSound(); }
+			// add code here to check player debuffs and update status display
+			playerDebuffController.MonitorRaidForPodDebuff();
+			
+			
 		}
 	}
 	
@@ -820,6 +849,9 @@ class com.theck.ALIA.ALIA
 		warningController.StopBlink();
 		npcDisplay.DecayDisplay(3);
 		
+		// stop any debuff polling interval
+		playerDebuffController.StopCheckingDebuffs();
+		
 		// set encounterPhase to 4 to signify death
 		AdvanceEncounterState( 4, "LurkerDied()");
 	}
@@ -836,6 +868,9 @@ class com.theck.ALIA.ALIA
 		// decay any remaining message, also stop blinking
 		warningController.DecayText(3);
 		warningController.StopBlink();
+		
+		// stop any debuff polling interval
+		playerDebuffController.StopCheckingDebuffs();
 		
 		// reset accumulators / encounter state variable
 		ResetAccumulators();
@@ -927,24 +962,44 @@ class com.theck.ALIA.ALIA
 	//////  Sounds  ///////
 	///////////////////////
 	
-	public function PlayPersonalSpaceWarningSound() {
+	public function PlayPersonalSpaceSoonWarningSound() {
 		// breaking target and retargeting the boss can generate the signal multiple times,
 		// so we have to throttle the sound playing
-		if ( !personalSoundAlreadyPlaying ) {
+		if ( !personalSoonSoundAlreadyPlaying ) {
 			// throttle sound 
-			personalSoundAlreadyPlaying = true;
+			personalSoonSoundAlreadyPlaying = true;
 			// create beep pattern
-			for ( var i:Number = 0; i < 10; i ++ )
+			for ( var i:Number = 0; i < 4; i ++ )
 			{
-				setTimeout(Delegate.create(this, PlaySingleBeep), i*450);
+				setTimeout(Delegate.create(this, PlaySingleBeep), i*800);
 			}
 			// unthrottle after 5 seconds
-			setTimeout(Delegate.create(this, ResetPersonalSpaceWarningSoundFlag), 5000 );
+			setTimeout(Delegate.create(this, ResetPersonalSpaceSoonWarningSoundFlag), 5000 );
 		}		
 	}
 	
-	public function ResetPersonalSpaceWarningSoundFlag() {
-		personalSoundAlreadyPlaying = false;
+	public function ResetPersonalSpaceSoonWarningSoundFlag() {
+		personalSoonSoundAlreadyPlaying = false;
+	}
+	
+	public function PlayPersonalSpaceNowWarningSound() {
+		// breaking target and retargeting the boss can generate the signal multiple times,
+		// so we have to throttle the sound playing
+		if ( !personalNowSoundAlreadyPlaying ) {
+			// throttle sound 
+			personalNowSoundAlreadyPlaying = true;
+			// create beep pattern
+			for ( var i:Number = 0; i < 10; i ++ )
+			{
+				setTimeout(Delegate.create(this, PlaySingleBeep), i*300);
+			}
+			// unthrottle after 5 seconds
+			setTimeout(Delegate.create(this, ResetPersonalSpaceNowWarningSoundFlag), 5000 );
+		}		
+	}
+	
+	public function ResetPersonalSpaceNowWarningSoundFlag() {
+		personalNowSoundAlreadyPlaying = false;
 	}
 	
 	public function PlayFromBeneathWarningSound() {
@@ -1000,6 +1055,13 @@ class com.theck.ALIA.ALIA
 			DebugText("NPC Status Display created");
 		}
 		
+		// if the debuff checker doesn't exist, create one
+		if !playerDebuffController {
+			playerDebuffController = new playerDebuffChecker();
+			playerDebuffController.DebuffStatusChanged.Connect(UpdatePodText, this);
+			DebugText("Player Debuff Checker created");
+		}
+		
 		// Set default text
         warningController.UpdateText("A Lurker Is Announced");
 		warningController.DecayText(textDecayTime);
@@ -1015,6 +1077,7 @@ class com.theck.ALIA.ALIA
 		warningController = undefined;
 		healthController = undefined;
 		npcDisplay = undefined;		
+		playerDebuffController = undefined;
 	}
 	
 	private function UpdateWarning(text:String)	{
@@ -1044,7 +1107,11 @@ class com.theck.ALIA.ALIA
 		npcDisplay.UpdateAll(mei.GetStatus(), rose.GetStatus(), alex.GetStatus(), zuberi.GetStatus());
 	}
 	
-    public function WarningStartDrag() {
+    private function UpdatePodText() {
+		npcDisplay.UpdatePodStatus(playerDebuffController.GetVictimName(), playerDebuffController.GetVictimStatus() );
+	}
+	
+	public function WarningStartDrag() {
 		DebugText("WarningStartDrag called");
         warningController.clip.startDrag();
     }

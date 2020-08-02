@@ -29,6 +29,8 @@ class com.theck.ALIA.npcStatusMonitor
 	
 	public var StatusChanged:Signal;
 	
+	
+	
 	public function npcStatusMonitor(_char:Character) 
 	{
 		char = _char;
