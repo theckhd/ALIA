@@ -16,16 +16,17 @@ class gui.theck.npcStatusDisplay
 	static var statusText:Array = new Array("", "", "", "Doomed" , "Podded");
 		
     public var clip:MovieClip;
+	
     private var alexLetter:TextField;
     private var roseLetter:TextField;
     private var meiLetter:TextField;
     private var zuberiLetter:TextField;
-    private var podLetter:TextField;
+	
     private var alexStatusText:TextField;
     private var roseStatusText:TextField;
     private var meiStatusText:TextField;
     private var zuberiStatusText:TextField;
-    private var podStatusText:TextField;
+	
 	
 	static var textSize:Number = 30;
 	static var boxSize:Number = textSize * 1.35;
@@ -50,25 +51,21 @@ class gui.theck.npcStatusDisplay
 			letterOffset = textSize * ( -1 );
 		}
 		
-		podLetter = clip.createTextField("pod", clip.getNextHighestDepth(), letterOffset, -boxSize, letterWidth, boxSize);
 		meiLetter = clip.createTextField("mei", clip.getNextHighestDepth(), letterOffset, 0, letterWidth, boxSize);
 		roseLetter = clip.createTextField("rose", clip.getNextHighestDepth(), letterOffset, boxSize, letterWidth, boxSize);
         alexLetter = clip.createTextField("alex", clip.getNextHighestDepth(), letterOffset, 2*boxSize, letterWidth, boxSize);
 		zuberiLetter = clip.createTextField("zuberi", clip.getNextHighestDepth(), letterOffset, 3*boxSize, letterWidth, boxSize);
 		
-		InitializeLetter(podLetter, showFullNPCNames);
 		InitializeLetter(meiLetter, showFullNPCNames);
 		InitializeLetter(roseLetter, showFullNPCNames);
 		InitializeLetter(alexLetter, showFullNPCNames);
 		InitializeLetter(zuberiLetter, showFullNPCNames);
 		
-		podStatusText = clip.createTextField("podStatus", clip.getNextHighestDepth(), boxSize, -boxSize, statusTextWidth, boxSize);
 		meiStatusText = clip.createTextField("meiStatus", clip.getNextHighestDepth(), boxSize, 0, statusTextWidth, boxSize);
 		roseStatusText = clip.createTextField("roseStatus", clip.getNextHighestDepth(), boxSize, boxSize, statusTextWidth, boxSize);
 		alexStatusText = clip.createTextField("alexStatus", clip.getNextHighestDepth(), boxSize, 2*boxSize, statusTextWidth, boxSize);
 		zuberiStatusText = clip.createTextField("zuberiStatus", clip.getNextHighestDepth(), boxSize, 3*boxSize, statusTextWidth, boxSize);
 		
-		InitializeStatusText(podStatusText);
 		InitializeStatusText(meiStatusText);
 		InitializeStatusText(roseStatusText);
 		InitializeStatusText(alexStatusText);
@@ -91,14 +88,12 @@ class gui.theck.npcStatusDisplay
 		showFullNPCNames = newState;
 		
 		// set all x values to letterOffset
-		podLetter._x = letterOffset;
 		meiLetter._x = letterOffset;
 		roseLetter._x = letterOffset;
 		alexLetter._x = letterOffset;
 		zuberiLetter._x = letterOffset;
 		
 		// set all width values to letterWidth
-		podLetter._width = letterWidth;
 		meiLetter._width = letterWidth;
 		roseLetter._width = letterWidth;
 		alexLetter._width = letterWidth;
@@ -109,7 +104,6 @@ class gui.theck.npcStatusDisplay
 	}
 	
 	public function InitializeAllLetters(fullNPCs:Boolean) {
-		InitializeLetter(podLetter, fullNPCs);
 		InitializeLetter(meiLetter, fullNPCs);
 		InitializeLetter(roseLetter, fullNPCs);
 		InitializeLetter(alexLetter, fullNPCs);
@@ -143,10 +137,7 @@ class gui.theck.npcStatusDisplay
 				break;
 			case "zuberi":
 				field.text = ( fullNPCs ? "Zub" : "Z" );
-				break;		
-			case "pod":
-				field.text = ( fullNPCs ? "Pod" : "P" );
-				break;	
+				break;
 		}	
 		
 	}
@@ -163,34 +154,22 @@ class gui.theck.npcStatusDisplay
 	}
 	
 	private function SetFakeStatusText() {
-		podStatusText.text = "You";
 		meiStatusText.text = "Doomed";
 		roseStatusText.text = "Podded";
 		alexStatusText.text = "OK";
 		zuberiStatusText.text = "High";
 	}
-	
-/*	public function EnableGUIEdit(state:Boolean)
-	{		
-		//UpdateText("100%");
-		SetVisible(true);
-		ToggleBackground(true);
-		EnableInteraction(true);
-	}*/
-	
+		
 	public function SetGUIEdit(state:Boolean) {
 		Debugger.DebugText("NPCSD:SetGUIEdit() called with argument: " + state, debugMode);
 		ToggleBackground(state);
 		EnableInteraction(state);
 		if state {
 			UpdateAll(0, 0, 0, 0);
-			UpdateLetter(podLetter, 0);
 			SetFakeStatusText();
 		}
 		else {
 			UpdateAll(undefined, undefined, undefined, undefined);
-			podStatusText.text = "";
-			UpdateLetter(podLetter, undefined);
 		}
 	}
 	
@@ -275,7 +254,6 @@ class gui.theck.npcStatusDisplay
 		// if we haven't started yet, show everything
 		if phase < 1 
 		{
-			ShowPodStatus(true);
 			ShowMeiStatus(true);
 			ShowRoseStatus(true);
 			ShowAlexStatus(true);
@@ -304,12 +282,11 @@ class gui.theck.npcStatusDisplay
 			// alex and zuberi are not used, hide
 			ShowAlexStatus(false);
 			ShowZuberiStatus(false);
-			ShowPodStatus(false);
 		}
 		// in phase 3, use default settings
 		else if phase == 3 
 		{
-			ShowPodStatus(false);
+			//ShowPodStatus(false);
 			ShowMeiStatus(true);
 			ShowRoseStatus(true);
 			ShowAlexStatus(true);
@@ -335,15 +312,6 @@ class gui.theck.npcStatusDisplay
 	
 	public function UpdateDownfallNumber( num:Number ) { roseStatusText.text = String(num); }
 	
-	public function UpdatePodStatus( playerName:String, playerStatus:Number ) {
-		
-		podStatusText.text = playerName;
-		podStatusText.textColor = statusColors[playerStatus];	
-		podLetter.textColor = statusColors[playerStatus];
-		
-		ShowPodStatus(playerStatus > 0);
-	}
-	
 	public function ToggleBackground(flag:Boolean) {
 		alexLetter.background = flag;
 		roseLetter.background = flag;
@@ -353,8 +321,6 @@ class gui.theck.npcStatusDisplay
 		meiStatusText.background = flag;
 		roseStatusText.background = flag;
 		zuberiStatusText.background = flag;	
-		podStatusText.background = flag;
-		podLetter.background = flag;
 	}
 
 	public function EnableInteraction(state:Boolean) {
@@ -363,12 +329,10 @@ class gui.theck.npcStatusDisplay
 		meiLetter.hitTestDisable = !state;
 		roseLetter.hitTestDisable = !state;
 		zuberiLetter.hitTestDisable = !state;
-		podLetter.hitTestDisable = !state;
 		alexStatusText.hitTestDisable = !state;
 		meiStatusText.hitTestDisable = !state;
 		roseStatusText.hitTestDisable = !state;
 		zuberiStatusText.hitTestDisable = !state;
-		podStatusText.hitTestDisable = !state;
 	}
 	
 	public function DecayDisplay(decayTime) {
@@ -397,12 +361,7 @@ class gui.theck.npcStatusDisplay
 		zuberiStatusText._alpha = 100;
 		Debugger.DebugText("NPSCSD: ResetAlpha(): meiLetter._alpha = " + meiLetter._alpha, debugMode);
 	}
-	
-	public function ShowPodStatus(flag:Boolean) {
-		podLetter._visible = flag;
-		podStatusText._visible = flag;
-	}
-	
+		
 	public function ShowMeiStatus(flag:Boolean) {
 		meiLetter._visible = flag;
 		meiStatusText._visible = flag;
@@ -425,7 +384,6 @@ class gui.theck.npcStatusDisplay
 	
 	public function HideAllStatus() {
 		Debugger.DebugText("NPSCSD: HIdeAllStatus()", debugMode);
-		ShowPodStatus(false);
 		ShowMeiStatus(false);
 		ShowRoseStatus(false);
 		ShowAlexStatus(false);

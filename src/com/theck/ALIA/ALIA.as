@@ -3,10 +3,10 @@
 * @author theck
 */
 
-import com.GameInterface.Game.Raid;
-import com.GameInterface.Game.Team;
-import com.GameInterface.Game.TeamInterface;
-import com.GameInterface.UtilsBase;
+//import com.GameInterface.Game.Raid;
+//import com.GameInterface.Game.Team;
+//import com.GameInterface.Game.TeamInterface;
+//import com.GameInterface.UtilsBase;
 
 import com.GameInterface.DistributedValue;
 import com.GameInterface.Game.Character;
@@ -22,6 +22,8 @@ import com.theck.Utils.Debugger;
 import com.theck.ALIA.npcStatusMonitor;
 import gui.theck.TextFieldController;
 import gui.theck.npcStatusDisplay;
+import gui.theck.lurkerBarDsiplay;
+import gui.theck.podTargetsDisplay;
 import mx.utils.Delegate;
 import flash.geom.Point;
 
@@ -80,12 +82,15 @@ class com.theck.ALIA.ALIA
 	private var w_pos:flash.geom.Point;
 	private var h_pos:flash.geom.Point;
 	private var n_pos:flash.geom.Point;
+	private var p_pos:flash.geom.Point;
 	private var warningController:TextFieldController;
 	private var healthController:TextFieldController;
 	private var updateHealthDisplay:Boolean;
 	private var npcDisplay:npcStatusDisplay;
 	private var playerDebuffController:playerDebuffChecker;
 	private var guiEditThrottle:Boolean = true;
+	private var podDisplay:podTargetsDisplay;
+	private var barDisplay:lurkerBarDsiplay;
 	
 	// logic flags and accumulators
 	private var ann_SB1_Soon:Boolean;
@@ -320,6 +325,9 @@ class com.theck.ALIA.ALIA
 		n_pos = config.FindEntry("alia_npcPosition", new Point(600, 400));
 		npcDisplay.SetPos(n_pos);
 		
+		p_pos = config.FindEntry("alia_podPosition", new Point(1100, 600));
+		podDisplay.SetPos(n_pos);
+		
 		// set options
 		// the arguments here are the names of the settings within Config (not the slash command strings)
 		pct_warning.SetValue(config.FindEntry("alia_pct_warning", 3));
@@ -340,6 +348,7 @@ class com.theck.ALIA.ALIA
 		config.AddEntry("alia_warnPosition", w_pos);
 		config.AddEntry("alia_healthPosition", h_pos);
 		config.AddEntry("alia_npcPosition", n_pos);
+		config.AddEntry("alia_podPosition", p_pos);
 		
 		// save options
 		// the arguments here are the names of the settings within Config (not the slash command strings)
@@ -415,7 +424,6 @@ class com.theck.ALIA.ALIA
 			//PlayPersonalSpaceSoonWarningSound();
 			//setTimeout(Delegate.create(this, PlayPersonalSpaceNowWarningSound), 5000);	
 		
-			playerDebuffController.CheckForDebuffs();
 			//var team:Team = TeamInterface.GetClientTeamInfo();
 			//for (var i in team.m_TeamMembers)
 			//{
@@ -969,9 +977,9 @@ class com.theck.ALIA.ALIA
 			// throttle sound 
 			personalSoonSoundAlreadyPlaying = true;
 			// create beep pattern
-			for ( var i:Number = 0; i < 4; i ++ )
+			for ( var i:Number = 0; i < 5; i ++ )
 			{
-				setTimeout(Delegate.create(this, PlaySingleBeep), i*800);
+				setTimeout(Delegate.create(this, PlaySingleBeep), i*900);
 			}
 			// unthrottle after 5 seconds
 			setTimeout(Delegate.create(this, ResetPersonalSpaceSoonWarningSoundFlag), 5000 );
@@ -989,9 +997,9 @@ class com.theck.ALIA.ALIA
 			// throttle sound 
 			personalNowSoundAlreadyPlaying = true;
 			// create beep pattern
-			for ( var i:Number = 0; i < 10; i ++ )
+			for ( var i:Number = 0; i < 25; i ++ )
 			{
-				setTimeout(Delegate.create(this, PlaySingleBeep), i*300);
+				setTimeout(Delegate.create(this, PlaySingleBeep), i*200);
 			}
 			// unthrottle after 5 seconds
 			setTimeout(Delegate.create(this, ResetPersonalSpaceNowWarningSoundFlag), 5000 );
@@ -1055,11 +1063,22 @@ class com.theck.ALIA.ALIA
 			DebugText("NPC Status Display created");
 		}
 		
+		// if the pod target display doesn't exist, create it
+		if !podDisplay {
+			podDisplay = new podTargetsDisplay(m_swfRoot);
+			DebugText("Pod Target Display created");
+		}
+		
 		// if the debuff checker doesn't exist, create one
 		if !playerDebuffController {
-			playerDebuffController = new playerDebuffChecker();
-			playerDebuffController.DebuffStatusChanged.Connect(UpdatePodText, this);
+			playerDebuffController = new playerDebuffChecker(podDisplay);
+			//playerDebuffController.DebuffStatusChanged.Connect(UpdatePodText, this);
 			DebugText("Player Debuff Checker created");
+		}
+		
+		// if the lurker bar display doesn't already exist, create one
+		if ( !barDisplay && debugMode ) {
+			barDisplay = new lurkerBarDsiplay(m_swfRoot);
 		}
 		
 		// Set default text
@@ -1078,6 +1097,7 @@ class com.theck.ALIA.ALIA
 		healthController = undefined;
 		npcDisplay = undefined;		
 		playerDebuffController = undefined;
+		podDisplay = undefined;
 	}
 	
 	private function UpdateWarning(text:String)	{
@@ -1107,9 +1127,9 @@ class com.theck.ALIA.ALIA
 		npcDisplay.UpdateAll(mei.GetStatus(), rose.GetStatus(), alex.GetStatus(), zuberi.GetStatus());
 	}
 	
-    private function UpdatePodText() {
-		npcDisplay.UpdatePodStatus(playerDebuffController.GetVictimName(), playerDebuffController.GetVictimStatus() );
-	}
+    //private function UpdatePodText() {
+		//npcDisplay.UpdatePodStatus(playerDebuffController.GetVictimName(), playerDebuffController.GetVictimStatus() );
+	//}
 	
 	public function WarningStartDrag() {
 		DebugText("WarningStartDrag called");
@@ -1155,7 +1175,21 @@ class com.theck.ALIA.ALIA
 		
 		DebugText("NpcStopDrag: x: " + n_pos.x + "  y: " + n_pos.y);
     }
+	
+    public function PodStartDrag() {
+		DebugText("podStartDrag called");
+        podDisplay.clip.startDrag();
+    }
 
+    public function PodStopDrag() {
+		DebugText("podStopDrag called");
+        podDisplay.clip.stopDrag();
+		
+		// grab position for config storage on Deactivate()
+        p_pos = Common.getOnScreen(podDisplay.clip); 
+		
+		DebugText("podStopDrag: x: " + p_pos.x + "  y: " + p_pos.y);
+    }
     public function ShowZuberi():Boolean {
 		if ( Boolean(showZuberi.GetValue()) || lurkerEliteLevel > 10 ) 
 		{
@@ -1177,6 +1211,7 @@ class com.theck.ALIA.ALIA
 		warningController.SetVisible(IsNYR());
 		warningController.EnableInteraction(false);
 		healthController.SetVisible(IsNYR()); 
+		podDisplay.SetVisible(IsNYR());
 		
 		//only editable in NYR
 		if IsNYR() 
@@ -1200,6 +1235,10 @@ class com.theck.ALIA.ALIA
 				npcDisplay.clip.onPress = Delegate.create(this, NpcStartDrag);
 				npcDisplay.clip.onRelease = Delegate.create(this, NpcStopDrag);
 				
+				podDisplay.SetGUIEdit(true);
+				podDisplay.clip.onPress = Delegate.create(this, PodStartDrag);
+				podDisplay.clip.onRelease = Delegate.create(this, PodStopDrag);
+				
 				// set throttle variable - this prevents extra spam when the game calls GuiEdit event with false argument, which it seems to like to do ALL THE DAMN TIME
 				guiEditThrottle = true;
 			} 
@@ -1222,6 +1261,12 @@ class com.theck.ALIA.ALIA
 				npcDisplay.clip.onRelease = undefined;
 				npcDisplay.SetGUIEdit(false);
 				npcDisplay.SetVisible(IsNYR(), encounterPhase, ShowZuberi() );
+				
+				podDisplay.clip.stopDrag();
+				podDisplay.clip.onPress = undefined;
+				podDisplay.clip.onRelease = undefined;
+				podDisplay.SetGUIEdit(false);
+				podDisplay.SetVisible(IsNYR() );
 				
 				// set throttle variable
 				guiEditThrottle = false;

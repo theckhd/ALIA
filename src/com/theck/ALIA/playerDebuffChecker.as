@@ -9,11 +9,12 @@ import com.GameInterface.Game.Character;
 import com.GameInterface.Game.Raid;
 import com.GameInterface.Game.Team;
 import com.GameInterface.Game.TeamInterface;
+import com.theck.ALIA.poddedPlayerEntry;
 import com.theck.Utils.Debugger;
 import com.Utils.Signal;
 import com.Utils.LDBFormat;
+import gui.theck.podTargetsDisplay;
 import mx.utils.Delegate;
-import com.GameInterface.UtilsBase;
 
 class com.theck.ALIA.playerDebuffChecker
 {
@@ -24,21 +25,31 @@ class com.theck.ALIA.playerDebuffChecker
 	static var STATUS_PODDED:Number = 4;
 	static var STATUS_DOOMED:Number = 3;
 	static var STATUS_CLEAR:Number = 0;
+	static var POLLING_INTERVAL:Number = 250;
 	static var podded:Number = 7854429; // 7854429: "From Beneath You, It Devours", see npcStatusMonitor for more details
 	static var podIncoming:Number = 8907521; // 8907521": "Inevitable Doom", curiously there's no buff (visible or invisible) for story mode?
-	public var currentVictim:Character;
-	public var currentVictimStatus:Number;
+	//static var podIncoming:Number = 9463770; // Consuming creep for bugtesting
+	
+	public var victimArray:Array;
+	
 	private var debuffPollingInterval:Number;
+	private var forceChecking:Boolean;
+	
+	public var podDisplay:podTargetsDisplay;
 	
 	public var DebuffStatusChanged:Signal;
-	
+
 	
 
-	public function playerDebuffChecker() 
+	public function playerDebuffChecker(display:podTargetsDisplay) 
 	{
 		Debugger.DebugText("pDC.constructor", debugMode);
 		
+		podDisplay = display;
+		
         DebuffStatusChanged = new Signal();		
+		
+		victimArray = new Array();
 	}
 		
 	public function StopCheckingDebuffs() {	
@@ -48,41 +59,33 @@ class com.theck.ALIA.playerDebuffChecker
 		
 	}
 	
+	private function StopForceChecking() {
+		forceChecking = false;
+	}
+	
 	public function MonitorRaidForPodDebuff():Void {
 		Debugger.DebugText("pDC.MonitorRaidForPodDebuff()", debugMode);
 		
 		// clear any existing polling interval
-		StopCheckingDebuffs()
+		StopCheckingDebuffs();
 		
-		// run one check (this is likely to fail), but forces an update of currentVictim just in case
-		CheckForDebuffs();
+		// set force-check flag, expire after 25 seconds
+		forceChecking = true;
+		setTimeout(Delegate.create(this, StopForceChecking), 25000);
 		
-		// if we don't know who's doomed yet
-		if !currentVictim {
-			// start polling every 250 ms
-			debuffPollingInterval = setInterval(Delegate.create(this, CheckForDebuffs), 250);
-			
-			// stop polling after 28s (3s cast + 25s travel time) to make sure we don't end up with multiple simultaneous polling intervals going
-			// if ain't nobody podded after 25s, ain't nobody getting podded
-			// this needs to be < 30s so that we don't accidentally clear the interval from subsequent pod casts
-			setTimeout(Delegate.create(this, StopCheckingDebuffs), 28000); 
-		}
+		// start polling every 250 ms
+		debuffPollingInterval = setInterval(Delegate.create(this, CheckForDebuffs), POLLING_INTERVAL);		
 	}
 	
 	
 	public function CheckForDebuffs() {
 		//Debugger.DebugText("pDC.CheckForDebuffs()", debugMode);
-		currentVictim = undefined;
 		
 		var raid:Raid = TeamInterface.GetClientRaidInfo();
-		var team:Team = TeamInterface.GetClientTeamInfo();;
-		
-		//Debugger.DebugText("pDC.CheckForDebuffs(): raid is " + raid, debugMode);
-		//Debugger.DebugText("pDC.CheckForDebuffs(): team is " + team, debugMode);
+		var team:Team = TeamInterface.GetClientTeamInfo();
 		
 		// check to see if we're in a raid
 		if ( raid ) {
-			Debugger.DebugText("pDC.CheckForDebuffs(): checking raid", debugMode);
 			
 			// if so, check each team in the raid
 			for ( var key:String in raid.m_Teams ) {
@@ -91,43 +94,34 @@ class com.theck.ALIA.playerDebuffChecker
 			}
 		}
 		// otherwise, just check our current team (only needed if 5 or fewer in instance, so likely only SM/E1)
-		else if ( team ) {		
-			Debugger.DebugText("pDC.CheckForDebuffs(): checking team", debugMode);
-		
+		else if ( team ) {				
 			CheckTeamForDebuffs( team );
 		}
 		// otherwise you're alone. Pretty sure you're getting podded, but just for completeness we'll check anyway
 		else {
-			Debugger.DebugText("pDC.CheckForDebuffs(): checking self", debugMode);
-			
 			CheckPlayerForDebuffs(Character.GetClientCharacter());
 		}
 	
-		// if we've found a person with the debuff, connect signals, disable interval, emit signal to update
-		if ( currentVictim ) {
-			Debugger.DebugText("pDC.CheckForDebuffs(): currentVictim is " + currentVictim.GetName(), debugMode);
-			ConnectVictimSignals();
+		UpdatePodTargetsDisplay();
+		
+		// if there are no podded players and we've passed the force-check period, stop checking
+		if ( victimArray.length == 0 && !forceChecking ) {
 			StopCheckingDebuffs();
-			//Debugger.DebugText("pDC.CheckForDebuffs(): interval is " + debuffPollingInterval + ", should be cleared?", debugMode );
-			DebuffStatusChanged.Emit();
 		}
 		
-		//Debugger.DebugText("pDC.CheckForDebuffs(): interval is " + debuffPollingInterval , debugMode );
+		podDisplay.SetVisible( victimArray.length > 0 ? true : false );
+		
+		Debugger.DebugText("pDC.CheckForDebuffs(): interval is " + debuffPollingInterval , debugMode );
 	}
 	
 	private function CheckTeamForDebuffs(team:Team) {
 		//Debugger.DebugText("pDC.CheckTeamForDebuffs()", debugMode);
-		
-		
-		//Debugger.DebugText("pDC.CheckTeamForDebuffs(): team.m_TeamMembers.length is " + team.m_TeamMembers.length, debugMode);
 		
 		for ( var i in team.m_TeamMembers ) {
 				
 			// grab one character
 			var teamMember = team.m_TeamMembers[i];
 			var char:Character = Character.GetCharacter( teamMember["m_CharacterId"] );
-			
-			//Debugger.DebugText("pDC.CheckTeamForDebuffs(): checking " + char.GetName(), debugMode);
 			
 			CheckPlayerForDebuffs(char);
 			
@@ -138,22 +132,27 @@ class com.theck.ALIA.playerDebuffChecker
 		//Debugger.DebugText("pDC.CheckPlayerForDebuffs()", debugMode);
 		
 		// make sure nothing fishy is going on
-			if ( !char ) return;
-			if ( char.GetName() == "" ) return; // (Xeio): Proxy check for character being out of range 
-			if ( char.IsDead() ) return;
-			if ( char.m_BuffList[DEATH_BUFFID] || char.m_InvisibleBuffList[DEATH_BUFFID] ) return;
+		if ( !char ) return;
+		if ( char.GetName() == "" ) return; // (Xeio): Proxy check for character being out of range 
+		if ( char.IsDead() ) return;
+		if ( char.m_BuffList[DEATH_BUFFID] || char.m_InvisibleBuffList[DEATH_BUFFID] ) return;
+		
+		// now check for Doom and Pod buffs
+		if ( char.m_BuffList[podIncoming] ) {
+							
+			var victim:poddedPlayerEntry = new poddedPlayerEntry( char, STATUS_DOOMED);
+			AddVictimToArray(victim);
 			
-			// now check for Doom and Pod buffs
-			if ( char.m_BuffList[podIncoming] ) {
-				
-				currentVictim = char;
-				currentVictimStatus = STATUS_DOOMED;
-			}
-			if ( char.m_BuffList[podded] ) {
-				
-				currentVictim = char;
-				currentVictimStatus = STATUS_PODDED;
-			}
+		}
+		else if ( char.m_BuffList[podded] ) {
+			
+			var victim:poddedPlayerEntry = new poddedPlayerEntry( char, STATUS_PODDED);
+			AddVictimToArray(victim);
+			//forceChecking = false;
+		}
+		else {
+			RemovePlayerFromArray(char);
+		}
 			
 /*			// verbose debugging - report all debuffs
 			if ( debugMode ) {
@@ -172,55 +171,53 @@ class com.theck.ALIA.playerDebuffChecker
 			}*/
 	}
 	
-	private function ConnectVictimSignals() {
-			currentVictim.SignalBuffAdded.Connect(VictimBuffAdded, this);
-			currentVictim.SignalBuffRemoved.Connect(VictimBuffRemoved, this);
-			//currentVictim.SignalInvisibleBuffAdded.Connect(VictimBuffAdded, this);
-			//currentVictim.SignalInvisibleBuffUpdated.Connect(VictimBuffRemoved, this);
-	}
-	
-	private function DisconnectVictimSignals() {
-			currentVictim.SignalBuffAdded.Disconnect(VictimBuffAdded);
-			currentVictim.SignalBuffRemoved.Disconnect(VictimBuffRemoved);
-			//currentVictim.SignalInvisibleBuffAdded.Disconnect(VictimBuffAdded);
-			//currentVictim.SignalInvisibleBuffUpdated.Disconnect(VictimBuffRemoved);		
-	}
-	
-	public function VictimBuffAdded(buffId:Number) {
-		Debugger.DebugText("pDC.VictimBuffAdded(): buffID " + buffId + " (" + LDBFormat.LDBGetText(50210, buffId) + ")", debugMode);
-		
-		if ( buffId == podIncoming ) {
-			currentVictimStatus = STATUS_DOOMED;
-			DebuffStatusChanged.Emit();
+	private function AddVictimToArray(victim:poddedPlayerEntry)
+	{
+		var foundInArray:Boolean = false;
+		// check to see if the player is already in the array
+		for ( var i in victimArray ) {
+			var tmp:poddedPlayerEntry = victimArray[i];
+			if ( tmp.GetName() == victim.GetName() ) {
+				victimArray[i] = victim;
+				foundInArray = true;
+			}
 		}
-		if ( buffId == podded ) {
-			currentVictimStatus = STATUS_PODDED;
-			DebuffStatusChanged.Emit();
-		}		
+		if ( !foundInArray ) {
+			victimArray.push(victim);
+		}
 	}
 	
-	public function VictimBuffRemoved(buffId:Number) {
-		Debugger.DebugText("pDC.VictimBuffRemoved(): buffID " + buffId + " (" + LDBFormat.LDBGetText(50210, buffId) + ")", debugMode);
+	private function RemovePlayerFromArray(char:Character)
+	{
+		for (var i in victimArray ) {
+			var tmp:poddedPlayerEntry = victimArray[i];
+			if ( tmp.GetName() == char.GetName() ) {
+				victimArray.splice(Number(i), 1);
+			}
+		}
+	}
+	
+	public function UpdatePodTargetsDisplay() {
 		
-		if ( buffId == podded ) {
-			currentVictimStatus = STATUS_CLEAR;
-			DisconnectVictimSignals();
-			currentVictim = undefined;
-			DebuffStatusChanged.Emit();
-		}		
+		// sort array?
+		podDisplay.ClearPlayerTextFields();
+		
+		DebugText("length of victimarray is " + victimArray.length );
+		
+		var j = 0;
+		for ( var i in victimArray ) {
+			DebugText("Victim array entry " + j + "is " + victimArray[j].char.GetName() + " with status " + victimArray[j].status);
+			podDisplay.SetFieldText(podDisplay.playerList[j], victimArray[i].char.GetName());
+			podDisplay.SetFieldColor(podDisplay.playerList[j], victimArray[i].status);
+			j++;
+		}
 	}
 	
 	
-	public function GetVictimStatus():Number {
-		//Debugger.DebugText("pDC.GetVictimStatus(): buffID", debugMode);
+	///// Debugging /////
 		
-		return currentVictimStatus;
-	}
-	
-	public function GetVictimName():String {
-		//Debugger.DebugText("pDC.GetVictimName()", debugMode);
-		
-		return currentVictim.GetName();
+	static function DebugText(text) {
+		if (debugMode) Debugger.PrintText(text);
 	}
 	
 }
