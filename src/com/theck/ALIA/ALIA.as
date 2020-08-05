@@ -326,7 +326,7 @@ class com.theck.ALIA.ALIA
 		npcDisplay.SetPos(n_pos);
 		
 		p_pos = config.FindEntry("alia_podPosition", new Point(1100, 600));
-		podDisplay.SetPos(n_pos);
+		podDisplay.SetPos(p_pos);
 		
 		// set options
 		// the arguments here are the names of the settings within Config (not the slash command strings)
@@ -656,6 +656,10 @@ class com.theck.ALIA.ALIA
 			// if we've moved to phase 3, force an update status on the NPCs as well
 			if state == 3 {
 				UpdateNPCStatusDisplay();
+			}
+			// hide pod display at beginning of phase 1 (it should automatically show/hide itself afterwards)
+			if state == 1 {
+				podDisplay.SetVisible(false);
 			}
 		}
 	}

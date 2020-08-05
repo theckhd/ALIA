@@ -42,9 +42,7 @@ class com.theck.ALIA.playerDebuffChecker
 	
 
 	public function playerDebuffChecker(display:podTargetsDisplay) 
-	{
-		Debugger.DebugText("pDC.constructor", debugMode);
-		
+	{		
 		podDisplay = display;
 		
         DebuffStatusChanged = new Signal();		
@@ -54,7 +52,7 @@ class com.theck.ALIA.playerDebuffChecker
 		
 	public function StopCheckingDebuffs() {	
 		
-		Debugger.DebugText("pDC.StopCheckingDebuffs()", debugMode);
+		DebugText("StopCheckingDebuffs()");
 		clearInterval(debuffPollingInterval); 
 		
 	}
@@ -64,7 +62,7 @@ class com.theck.ALIA.playerDebuffChecker
 	}
 	
 	public function MonitorRaidForPodDebuff():Void {
-		Debugger.DebugText("pDC.MonitorRaidForPodDebuff()", debugMode);
+		DebugText("MonitorRaidForPodDebuff()");
 		
 		// clear any existing polling interval
 		StopCheckingDebuffs();
@@ -111,7 +109,7 @@ class com.theck.ALIA.playerDebuffChecker
 		
 		podDisplay.SetVisible( victimArray.length > 0 ? true : false );
 		
-		Debugger.DebugText("pDC.CheckForDebuffs(): interval is " + debuffPollingInterval , debugMode );
+		DebugText("CheckForDebuffs(): interval is " + debuffPollingInterval );
 	}
 	
 	private function CheckTeamForDebuffs(team:Team) {
@@ -148,7 +146,6 @@ class com.theck.ALIA.playerDebuffChecker
 			
 			var victim:poddedPlayerEntry = new poddedPlayerEntry( char, STATUS_PODDED);
 			AddVictimToArray(victim);
-			//forceChecking = false;
 		}
 		else {
 			RemovePlayerFromArray(char);
@@ -217,7 +214,7 @@ class com.theck.ALIA.playerDebuffChecker
 	///// Debugging /////
 		
 	static function DebugText(text) {
-		if (debugMode) Debugger.PrintText(text);
+		if (debugMode) Debugger.PrintText("pDC." + text);
 	}
 	
 }
