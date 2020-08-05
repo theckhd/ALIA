@@ -9,7 +9,7 @@ There are two audible warnings, each of which is a short sequence of beeps. They
 
 ## Displays
 
-Currently there are three displays that appear. The displays only appear when in the Manhattan Exclusion Zone, the addon basically goes to sleep outside of that zone.
+Currently there are four displays that appear. The displays only appear when in the Manhattan Exclusion Zone, the addon basically goes to sleep outside of that zone.
 
 
 ![Screenshot of addon during encounter](screens/alia_npcs_health_2.png) ![Screenshot of addon during encounter](screens/alia_warning.png)
@@ -48,6 +48,10 @@ Currently there are three displays that appear. The displays only appear when in
       - Zuberi is automatically enabled in E17, but disabled by default in other difficulties. 
       - If you want to see what he's up to, you can enable him with `/setoption alia_zuberi true`
 
+- A Pod Targets display showing players about to be podded
+  - This shows all players with either debuff (Podded or Doomed)
+  - Uses the same color-coding as the NPC display (yellow for Doomed, red for podded)
+  - Should automatically show/hide itself as needed based on whether people are podded
 
 The displays can be moved (click & drag) in GUIEdit mode, and save their position between sessions.
 
