@@ -8,7 +8,7 @@
  
 import com.theck.Utils.Debugger;
 import flash.geom.Matrix;
-import caurina.transitions.Tweener;
+//import caurina.transitions.Tweener;
 import com.Utils.Text;
 
 class gui.theck.SimpleBar
@@ -22,6 +22,7 @@ class gui.theck.SimpleBar
 	private var m_leftText:TextField;
 	private var m_rightText:TextField;	
 	private var m_parent:MovieClip;
+	public var barHeight:Number;
 	
 	
 	private static var m_radius:Number = 4;
@@ -40,7 +41,6 @@ class gui.theck.SimpleBar
 		m_parent = parent;
 		m_frame = m_parent.createEmptyMovieClip(name + "CastBarFrame", m_parent.getNextHighestDepth());
 		m_scaleFrame = m_frame.createEmptyMovieClip(name + "ScaleFrame", m_frame.getNextHighestDepth());
-		m_scaleWidth = m_scaleFrame._width;
 		
 		m_frame._x = x;
 		m_frame._y = y;
@@ -50,12 +50,20 @@ class gui.theck.SimpleBar
 		
 		var extents:Object = Text.GetTextExtent("TEST", textFormat, m_frame);
 		var height:Number = extents.height + extents.height * 0.05 + 4;
+		barHeight = Math.ceil(height);
 		
 		Debugger.DebugText("SimpleBar: height = " + height, debugMode);
 		
 		m_bar = CreateBar( name + "Bar", width, height, colors);
-		m_leftText = m_frame.createTextField("m_leftText", m_frame.getNextHighestDepth(), 0, 0, 0, 0);
-		m_rightText = m_frame.createTextField("m_rightText", m_frame.getNextHighestDepth(), 0, 0, 0, 0);
+		m_leftText = m_frame.createTextField(name + "_leftText", m_frame.getNextHighestDepth(), 0, m_frame._height / 2 - extents.height / 2, 40, extents.height);
+		m_rightText = m_frame.createTextField(name + "_rightText", m_frame.getNextHighestDepth(), m_frame._width - 40, m_frame._height / 2 - extents.height / 2, 40, extents.height);
+		m_leftText.setNewTextFormat(textFormat);
+		m_rightText.setNewTextFormat(textFormat);
+		m_leftText.background = false;
+		m_rightText.background = false;
+		
+		//do this after CreateBar
+		m_scaleWidth = m_scaleFrame._width;
 		
 		DrawFilledRoundedRectangle(m_frame, 0x000000, 2, 0x000000, 50, 0, 0, width, height);
 		
@@ -71,7 +79,7 @@ class gui.theck.SimpleBar
 	{
 		var pt:Object = new Object();
 		pt.x = m_frame._x;
-		pt.y = m_frame._y;	
+		pt.y = m_frame._y;
 		return pt;
 	}
 	
@@ -99,11 +107,16 @@ class gui.theck.SimpleBar
 	
 	public function Update(pct:Number, leftString:String, rightString:String):Void
 	{
-		if ( pct == null || pct >= 1 ) {
+		Debugger.DebugText("SimpleBar: pct is " + pct, debugMode);
+		if ( pct == null ) {
+			Debugger.DebugText("SimpleBar: pct is " + pct, debugMode);
 			SetVisible(false);
 			m_scaleFrame._width = m_scaleWidth;
-		}
+		}		
 		else {
+			SetVisible(true);
+			Debugger.DebugText("SimpleBar: leftString is " + leftString, debugMode);
+			Debugger.DebugText("SimpleBar: rightString is " + rightString, debugMode);
 			// update strings if provided
 			if ( leftString != null ) {
 				m_leftText.text = leftString;
@@ -112,9 +125,13 @@ class gui.theck.SimpleBar
 				m_rightText.text = rightString;
 			}
 			
-			// update percentge bar
-			m_scaleFrame._width = ( m_scaleWidth * pct );
+			if ( pct > 1 ) { pct = 1 };
 			
+			// update percentage bar
+			//Debugger.DebugText("SimpleBar: pct is " + pct, debugMode);
+			//Debugger.DebugText("SimpleBar: m_scaleFrame._width is " + m_scaleFrame._width, debugMode);
+			//Debugger.DebugText("SimpleBar: m_scaleWidth is " + m_scaleWidth, debugMode);
+			m_scaleFrame._width = ( m_scaleWidth * pct );
 		}
 	}
 	
@@ -219,4 +236,5 @@ class gui.theck.SimpleBar
 		
 		return true;
 	}
+	
 }

@@ -12,7 +12,7 @@ import com.GameInterface.Game.TeamInterface;
 import com.theck.ALIA.poddedPlayerEntry;
 import com.theck.Utils.Debugger;
 import com.Utils.Signal;
-import com.Utils.LDBFormat;
+//import com.Utils.LDBFormat;
 import gui.theck.podTargetsDisplay;
 import mx.utils.Delegate;
 
@@ -131,9 +131,13 @@ class com.theck.ALIA.playerDebuffChecker
 		
 		// make sure nothing fishy is going on
 		if ( !char ) return;
-		if ( char.GetName() == "" ) return; // (Xeio): Proxy check for character being out of range 
-		if ( char.IsDead() ) return;
-		if ( char.m_BuffList[DEATH_BUFFID] || char.m_InvisibleBuffList[DEATH_BUFFID] ) return;
+		if ( char.GetName() == "" ) return; // (Xeio): Proxy check for character being out of range
+		
+		// remove character and exit if the character is dead
+		if ( char.IsDead() || char.m_BuffList[DEATH_BUFFID] || char.m_InvisibleBuffList[DEATH_BUFFID] ) {
+			RemovePlayerFromArray(char);
+			return;
+		}
 		
 		// now check for Doom and Pod buffs
 		if ( char.m_BuffList[podIncoming] ) {

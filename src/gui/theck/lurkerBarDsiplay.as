@@ -13,10 +13,11 @@ class gui.theck.lurkerBarDsiplay
 	
     public var clip:MovieClip;
 	
-	private var barFontSize:Number = 12;
+	private var barFontSize:Number = 16;
 	private var barWidths:Number = 200;
 	
 	private var fromBeneathBar:SimpleBar;
+	private var pureFilthBar:SimpleBar;
 	
 	
 	
@@ -28,6 +29,7 @@ class gui.theck.lurkerBarDsiplay
         clip._y = Stage.height / 2;
 		
 		fromBeneathBar = new SimpleBar("fromBeneath", clip, 0, 0, barWidths, barFontSize);
+		pureFilthBar = new SimpleBar("pureFilth", clip, 0, fromBeneathBar.barHeight, barWidths, barFontSize);
 	}
 	
 	
@@ -76,5 +78,9 @@ class gui.theck.lurkerBarDsiplay
 	
 	private function SetFakeStatusText() {
 		fromBeneathBar.Update(0.5, "Left", "Right");
+	}
+	
+	public function UpdateFromBeneathBar(pct:Number) {
+		fromBeneathBar.Update(pct, "Alpha", "Beta");
 	}
 }

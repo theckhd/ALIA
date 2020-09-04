@@ -421,7 +421,10 @@ class com.theck.ALIA.ALIA
 		// stupid hack for debugging purposes only
 		if ( debugMode && debuggingHack.GetValue() ){ 
 			
-			//PlayPersonalSpaceSoonWarningSound();
+			PlayPersonalSpaceSoonWarningSound();
+			
+			
+			barDisplay.UpdateFromBeneathBar(0.9);
 			//setTimeout(Delegate.create(this, PlayPersonalSpaceNowWarningSound), 5000);	
 		
 			//var team:Team = TeamInterface.GetClientTeamInfo();
@@ -981,10 +984,14 @@ class com.theck.ALIA.ALIA
 			// throttle sound 
 			personalSoonSoundAlreadyPlaying = true;
 			// create beep pattern
-			for ( var i:Number = 0; i < 5; i ++ )
-			{
-				setTimeout(Delegate.create(this, PlaySingleBeep), i*900);
-			}
+			PlayMobilePhoneTone6();
+			setTimeout(Delegate.create(this, PlayMobilePhoneTone7), 300 );
+			setTimeout(Delegate.create(this, PlayMobilePhoneTone8), 600 );
+			setTimeout(Delegate.create(this, PlayMobilePhoneTone9), 900 );
+			//for ( var i:Number = 0; i < 5; i ++ )
+			//{
+				//setTimeout(Delegate.create(this, PlaySingleBeep), i*900);
+			//}
 			// unthrottle after 5 seconds
 			setTimeout(Delegate.create(this, ResetPersonalSpaceSoonWarningSoundFlag), 5000 );
 		}		
@@ -1040,6 +1047,19 @@ class com.theck.ALIA.ALIA
 	
 	public function PlaySingleMobilePositive() {
 		com.GameInterface.Game.Character.GetClientCharacter().AddEffectPackage("sound_fx_package_mobile_positive_feedback.xml");
+	}
+	
+	public function PlayMobilePhoneTone6() {
+		com.GameInterface.Game.Character.GetClientCharacter().AddEffectPackage("sound_fx_package_mobile_phone_button_6.xml");
+	}
+	public function PlayMobilePhoneTone7() {
+		com.GameInterface.Game.Character.GetClientCharacter().AddEffectPackage("sound_fx_package_mobile_phone_button_7.xml");
+	}
+	public function PlayMobilePhoneTone8() {
+		com.GameInterface.Game.Character.GetClientCharacter().AddEffectPackage("sound_fx_package_mobile_phone_button_8.xml");
+	}
+	public function PlayMobilePhoneTone9() {
+		com.GameInterface.Game.Character.GetClientCharacter().AddEffectPackage("sound_fx_package_mobile_phone_button_9.xml");
 	}
 	
 	///////////////////////
