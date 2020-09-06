@@ -21,11 +21,14 @@ class gui.theck.SimpleBar
 	private var m_scaleWidth:Number;
 	private var m_leftText:TextField;
 	private var m_rightText:TextField;	
+	private var m_dragText:TextField;
 	private var m_parent:MovieClip;
 	public var barHeight:Number;
 	
 	
 	private static var m_radius:Number = 4;
+	private static var rightTextWidth:Number = 70;
+	private static var leftTextWidth:Number = 50;
 	
 	public function SimpleBar(name:String, parent:MovieClip, x:Number, y:Number, width:Number, inFontSize:Number, colors:Array) 
 	{
@@ -41,30 +44,49 @@ class gui.theck.SimpleBar
 		m_parent = parent;
 		m_frame = m_parent.createEmptyMovieClip(name + "CastBarFrame", m_parent.getNextHighestDepth());
 		m_scaleFrame = m_frame.createEmptyMovieClip(name + "ScaleFrame", m_frame.getNextHighestDepth());
+		m_bar = m_scaleFrame.createEmptyMovieClip(name+"Bar", m_scaleFrame.getNextHighestDepth());
 		
 		m_frame._x = x;
 		m_frame._y = y;
 		
 		var textFormat:TextFormat = new TextFormat("_StandardFont", fontSize, 0xFFFFFF, true);
-        textFormat.align = "center"
+		textFormat.align = "right";
 		
 		var extents:Object = Text.GetTextExtent("TEST", textFormat, m_frame);
 		var height:Number = extents.height + extents.height * 0.05 + 4;
 		barHeight = Math.ceil(height);
 		
-		Debugger.DebugText("SimpleBar: height = " + height, debugMode);
+		//Debugger.DebugText("SimpleBar: height = " + height, debugMode);
+		//Debugger.DebugText("SimpleBar: m_bar parent is " + m_bar._parent, debugMode);
+		//Debugger.DebugText("SimpleBar: m_frame parent is " + m_frame._parent, debugMode);
+		//Debugger.DebugText("SimpleBar: m_scaleFrame parent is " + m_scaleFrame._parent, debugMode);
 		
-		m_bar = CreateBar( name + "Bar", width, height, colors);
-		m_leftText = m_frame.createTextField(name + "_leftText", m_frame.getNextHighestDepth(), 0, m_frame._height / 2 - extents.height / 2, 40, extents.height);
-		m_rightText = m_frame.createTextField(name + "_rightText", m_frame.getNextHighestDepth(), m_frame._width - 40, m_frame._height / 2 - extents.height / 2, 40, extents.height);
-		m_leftText.setNewTextFormat(textFormat);
-		m_rightText.setNewTextFormat(textFormat);
+		//m_bar = CreateBar( name + "Bar", width, height, colors); // deprecated?
+		CreateBar2(m_bar, width, height, colors);
+		
+		m_leftText = m_frame.createTextField(name + "_leftText", m_frame.getNextHighestDepth(), -50, m_frame._height / 2 - extents.height / 2, leftTextWidth, extents.height);
+		m_rightText = m_frame.createTextField(name + "_rightText", m_frame.getNextHighestDepth(), m_bar._width - rightTextWidth, m_frame._height / 2 - extents.height / 2, rightTextWidth, extents.height);
+		
+		m_leftText.setNewTextFormat(textFormat);		
+		m_rightText.setNewTextFormat(textFormat);		
 		m_leftText.background = false;
 		m_rightText.background = false;
 		
-		//do this after CreateBar
+		//Debugger.DebugText("SimpleBar: m_leftText parent is " + m_leftText._parent, debugMode);
+		//Debugger.DebugText("SimpleBar: m_rightText parent is " + m_rightText._parent, debugMode);
+		
+		// SUPER HACKY - for some reason MovieClips don't seem to register clicks in GUIEdit mode, but TextFields do. So we make one big TextField over the whole bar for GUIEdit purposes.
+		m_dragText = m_frame.createTextField(name + "_dragText", m_frame.getNextHighestDepth(), 0, 0, width, m_frame._height );		
+
+		textFormat.align = "center";
+		m_dragText.setNewTextFormat(textFormat);
+		m_dragText.text = "Drag Me";
+		m_dragText._visible = false;
+		
+		//do this after CreateBar, otherwise it doesn't have a width
 		m_scaleWidth = m_scaleFrame._width;
 		
+		// Draw the rectangle for the background
 		DrawFilledRoundedRectangle(m_frame, 0x000000, 2, 0x000000, 50, 0, 0, width, height);
 		
 	}
@@ -98,11 +120,22 @@ class gui.theck.SimpleBar
 			m_dragging = false;
 		}
 	}*/
+
+	//public function EnableInteraction(state:Boolean) {
+		////m_frame.hitTestDisable = !state;
+		//m_scaleFrame.hitTestDisable = !state;
+	//}
 	
 	public function Unload():Void
 	{
 		m_frame.removeMovieClip();
 		m_frame = null;
+	}
+	
+	public function ShowDragText(state:Boolean) {
+		m_dragText._visible = state;
+		m_leftText._visible = !state;
+		m_rightText._visible = !state;
 	}
 	
 	public function Update(pct:Number, leftString:String, rightString:String):Void
@@ -115,8 +148,8 @@ class gui.theck.SimpleBar
 		}		
 		else {
 			SetVisible(true);
-			Debugger.DebugText("SimpleBar: leftString is " + leftString, debugMode);
-			Debugger.DebugText("SimpleBar: rightString is " + rightString, debugMode);
+			//Debugger.DebugText("SimpleBar: leftString is " + leftString, debugMode);
+			//Debugger.DebugText("SimpleBar: rightString is " + rightString, debugMode);
 			// update strings if provided
 			if ( leftString != null ) {
 				m_leftText.text = leftString;
@@ -135,6 +168,13 @@ class gui.theck.SimpleBar
 		}
 	}
 	
+	public function SetRightText(rightString:String):Void
+	{
+		if ( rightString != null ) {
+			m_rightText.text = rightString;
+		}
+	}
+	
 	// Functions shamelessly stolen from BooBars and adapted for my nefarious purposes
 	
 	private function CreateBar(name:String, width:Number, height:Number, colours:Array):MovieClip
@@ -142,6 +182,11 @@ class gui.theck.SimpleBar
 		var bar:MovieClip = m_scaleFrame.createEmptyMovieClip(name, m_scaleFrame.getNextHighestDepth());
 		DrawGradientFilledRoundedRectangle(bar, 0x000000, 0, colours, 0, 0, width, height);
 		return bar;
+	}
+	
+	private function CreateBar2(bar:MovieClip, width:Number, height:Number, colours:Array)
+	{
+		DrawGradientFilledRoundedRectangle(bar, 0x000000, 0, colours, 0, 0, width, height);		
 	}
 	
 	private function DrawGradientFilledRoundedRectangle(mc:MovieClip, lineColour:Number, lineWidth:Number, fillColours:Array, x:Number, y:Number, width:Number, height:Number):Void

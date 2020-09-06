@@ -16,6 +16,7 @@ import com.Utils.ID32;
 import com.Utils.Archive;
 import com.Utils.LDBFormat;
 import com.Utils.GlobalSignal;
+import com.theck.ALIA.lurkerCooldownTracker;
 import com.theck.ALIA.playerDebuffChecker;
 import com.theck.Utils.Common;
 import com.theck.Utils.Debugger;
@@ -40,6 +41,7 @@ class com.theck.ALIA.ALIA
 	static var stringPersonalSpace:String = LDBFormat.LDBGetText(50210, 8934415); //"Personal Space";
 	static var stringFinalResort:String = LDBFormat.LDBGetText(50210, 7963851); //"Final Resort";
 	static var stringFromBeneath:String = LDBFormat.LDBGetText(50210, 8934432); //"From Beneath You, It Devours"
+	static var stringPureFilth:String = LDBFormat.LDBGetText(50210, 7854359); // "Pure Filth"
 	static var stringDownfall:String = LDBFormat.LDBGetText(50210, 7958970); //"Downfall", also 7958971
 	static var alex112:Number = 32302;
 	static var mei112:Number = 32301;
@@ -83,6 +85,7 @@ class com.theck.ALIA.ALIA
 	private var h_pos:flash.geom.Point;
 	private var n_pos:flash.geom.Point;
 	private var p_pos:flash.geom.Point;
+	private var b_pos:flash.geom.Point;
 	private var warningController:TextFieldController;
 	private var healthController:TextFieldController;
 	private var updateHealthDisplay:Boolean;
@@ -91,6 +94,7 @@ class com.theck.ALIA.ALIA
 	private var guiEditThrottle:Boolean = true;
 	private var podDisplay:podTargetsDisplay;
 	private var barDisplay:lurkerBarDsiplay;
+	private var cooldownTracker:lurkerCooldownTracker;
 	
 	// logic flags and accumulators
 	private var ann_SB1_Soon:Boolean;
@@ -116,6 +120,7 @@ class com.theck.ALIA.ALIA
 	private var shadowThrottleFlag:Boolean = true;
 	private var downfallThrottleFlag:Boolean = true;
 	private var lurkerEliteLevel:Number  = 0;
+	private var phaseThreeCooldownTimerStartFlag = false;
 	
 	
 	// percentages
@@ -328,6 +333,9 @@ class com.theck.ALIA.ALIA
 		p_pos = config.FindEntry("alia_podPosition", new Point(1100, 600));
 		podDisplay.SetPos(p_pos);
 		
+		b_pos = config.FindEntry("alia_barPosition", new Point(1100, 600));
+		barDisplay.SetPos(b_pos);
+		
 		// set options
 		// the arguments here are the names of the settings within Config (not the slash command strings)
 		pct_warning.SetValue(config.FindEntry("alia_pct_warning", 3));
@@ -349,6 +357,7 @@ class com.theck.ALIA.ALIA
 		config.AddEntry("alia_healthPosition", h_pos);
 		config.AddEntry("alia_npcPosition", n_pos);
 		config.AddEntry("alia_podPosition", p_pos);
+		config.AddEntry("alia_barPosition", b_pos);
 		
 		// save options
 		// the arguments here are the names of the settings within Config (not the slash command strings)
@@ -424,7 +433,7 @@ class com.theck.ALIA.ALIA
 			PlayPersonalSpaceSoonWarningSound();
 			
 			
-			barDisplay.UpdateFromBeneathBar(0.9);
+			barDisplay.UpdateFromBeneathBar(0.9, 20400);
 			//setTimeout(Delegate.create(this, PlayPersonalSpaceNowWarningSound), 5000);	
 		
 			//var team:Team = TeamInterface.GetClientTeamInfo();
@@ -574,6 +583,7 @@ class com.theck.ALIA.ALIA
 			
 			// attempt to set difficulty level
 			lurkerEliteLevel = GetLurkerEliteLevel(dynel112, lurker.GetStat(1, 1) );
+			cooldownTracker.SetLurkerDifficulty(lurkerEliteLevel);
 		}
 		
 		// attempt to grab helpful NPCs only under certain conditions (to try and avoid entrance grab)
@@ -654,11 +664,18 @@ class com.theck.ALIA.ALIA
 			encounterPhase = state;
 			
 			// update npcStatusDisplay visibility in phases 1-4
-			npcDisplay.SetVisibilityByPhase( encounterPhase, ShowZuberi() );	
+			npcDisplay.SetVisibilityByPhase( encounterPhase, ShowZuberi() );
 			
-			// if we've moved to phase 3, force an update status on the NPCs as well
+			// push this to the cooldown tracker
+			cooldownTracker.UpdateEncounterPhase(encounterPhase);
+			
+			// if we've moved to phase 3
 			if state == 3 {
+				//force an update status on the NPCs
 				UpdateNPCStatusDisplay();
+				
+				// and tell the lurker health monitor to push the first health change to the cooldown tracker
+				phaseThreeCooldownTimerStartFlag = true;
 			}
 			// hide pod display at beginning of phase 1 (it should automatically show/hide itself afterwards)
 			if state == 1 {
@@ -695,8 +712,14 @@ class com.theck.ALIA.ALIA
 				updateHealthDisplay = false;
 				setTimeout(Delegate.create(this, ResetUpdateHealthDisplayFlag), 250 );
 			}
-			if ( encounterPhase < 1 && pct < 0.995 ) { 
+			if ( encounterPhase < 1 && pct < 0.9995 ) { 
 				AdvanceEncounterState(1, "lurker health below 99.5%");
+			}
+			if ( phaseThreeCooldownTimerStartFlag && encounterPhase == 3 ) {
+				// start tracking cooldowns again as soon as lurker loses health in phase 3
+				cooldownTracker.StartTrackingCooldowns();
+				phaseThreeCooldownTimerStartFlag = false;
+				DebugText("cooldownTracker Start signal sent");
 			}
 			
 			// Shadow Incoming at 26369244 (75%)
@@ -778,8 +801,11 @@ class com.theck.ALIA.ALIA
 			numShadows++;
 			shadowThrottleFlag = false;
 			
-			// encounter phase logic - if 4rd shadow (5th on SM), set to phase 3
-			if ( numShadows > 3  && lurkerEliteLevel > 0 ) || ( numShadows > 4 ) {
+			// reset cooldown tracker
+			cooldownTracker.ResetShadowCooldown();
+			
+			// encounter phase logic - if 4th shadow (5th on SM or E1), set to phase 3
+			if ( numShadows > 3  && lurkerEliteLevel > 1 ) || ( numShadows > 4 ) {
 				AdvanceEncounterState(3, "Shadow #" + numShadows );
 			}
 			// otherwise set to phase 2 (shadow 1, or crash detection)
@@ -815,10 +841,16 @@ class com.theck.ALIA.ALIA
 		else if (spell == stringFromBeneath )
 		{
 			if (Boolean(fromBeneathSound.GetValue())) { PlayFromBeneathWarningSound(); }
-			// add code here to check player debuffs and update status display
+			// enable player debuff monitoring
 			playerDebuffController.MonitorRaidForPodDebuff();
-			
-			
+						
+			// reset cooldown tracker
+			cooldownTracker.ResetFromBeneathCooldown();			
+		}
+		else if (spell == stringPureFilth )
+		{
+			//reset cooldown tracker
+			cooldownTracker.ResetPureFilthCooldown();
 		}
 	}
 	
@@ -887,6 +919,11 @@ class com.theck.ALIA.ALIA
 		// stop any debuff polling interval
 		playerDebuffController.StopCheckingDebuffs();
 		
+		// stop the cooldown Tracker if it's running
+		cooldownTracker.StopTrackingCooldowns();
+		cooldownTracker.ResetEncounterPhase();
+		// TODO: reset the timers too
+		
 		// reset accumulators / encounter state variable
 		ResetAccumulators();
 		ResetEncounterState();
@@ -941,7 +978,7 @@ class com.theck.ALIA.ALIA
 		numDownfalls = 0;
 		
 		// encounter state logic - update to phase 3 if this is the third bird, or fourth on Story Mode
-		if ( numBirds > 2 && lurkerEliteLevel > 0 ) || ( numBirds > 3 ) {
+		if ( numBirds > 2 && lurkerEliteLevel > 1 ) || ( numBirds > 3 ) {
 			AdvanceEncounterState(3, "Bird #" + numBirds);
 		}
 	}
@@ -1101,8 +1138,15 @@ class com.theck.ALIA.ALIA
 		}
 		
 		// if the lurker bar display doesn't already exist, create one
-		if ( !barDisplay && debugMode ) {
+		if ( !barDisplay ) {
 			barDisplay = new lurkerBarDsiplay(m_swfRoot);
+			DebugText("Bar Display created");
+		}
+		
+		// if the cooldown tracker doesn't exist, create it
+		if ( !cooldownTracker ) {
+			cooldownTracker = new lurkerCooldownTracker(barDisplay);
+			DebugText("Cooldown Tracker created");
 		}
 		
 		// Set default text
@@ -1214,6 +1258,23 @@ class com.theck.ALIA.ALIA
 		
 		DebugText("podStopDrag: x: " + p_pos.x + "  y: " + p_pos.y);
     }
+	
+    public function BarStartDrag() {
+		DebugText("barStartDrag called");
+        barDisplay.clip.startDrag();
+    }
+
+    public function BarStopDrag() {
+		DebugText("barStopDrag called");
+        barDisplay.clip.stopDrag();
+		
+		// grab position for config storage on Deactivate()
+        b_pos = Common.getOnScreen(barDisplay.clip); 
+		
+		DebugText("barStopDrag: x: " + b_pos.x + "  y: " + b_pos.y);
+    }
+	
+	
     public function ShowZuberi():Boolean {
 		if ( Boolean(showZuberi.GetValue()) || lurkerEliteLevel > 10 ) 
 		{
@@ -1263,6 +1324,11 @@ class com.theck.ALIA.ALIA
 				podDisplay.clip.onPress = Delegate.create(this, PodStartDrag);
 				podDisplay.clip.onRelease = Delegate.create(this, PodStopDrag);
 				
+				barDisplay.SetGUIEdit(true);
+				barDisplay.clip.onPress = Delegate.create(this, BarStartDrag);
+				//barDisplay.fromBeneathBar.onP
+				barDisplay.clip.onRelease = Delegate.create(this, BarStopDrag);
+				
 				// set throttle variable - this prevents extra spam when the game calls GuiEdit event with false argument, which it seems to like to do ALL THE DAMN TIME
 				guiEditThrottle = true;
 			} 
@@ -1291,6 +1357,12 @@ class com.theck.ALIA.ALIA
 				podDisplay.clip.onRelease = undefined;
 				podDisplay.SetGUIEdit(false);
 				podDisplay.SetVisible(IsNYR() );
+				
+				barDisplay.clip.stopDrag();
+				barDisplay.clip.onPress = undefined;
+				barDisplay.clip.onRelease = undefined;
+				barDisplay.SetGUIEdit(false);
+				barDisplay.SetVisible(IsNYR() );
 				
 				// set throttle variable
 				guiEditThrottle = false;
