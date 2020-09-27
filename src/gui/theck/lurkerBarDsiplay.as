@@ -9,7 +9,7 @@ import com.theck.Utils.Debugger;
  
 class gui.theck.lurkerBarDsiplay
 {
-	private var debugMode:Boolean = true;
+	private var debugMode:Boolean = false;
 	
     public var clip:MovieClip;
 	
@@ -89,9 +89,14 @@ class gui.theck.lurkerBarDsiplay
 		return pos;
 	}
 		
-	public function SetVisible(flag:Boolean) {
-		Debugger.DebugText("lBD.SetVisible()", debugMode);
-		clip._visible = flag;
+	public function SetVisible(flag:Boolean, phase:Number) {
+		Debugger.DebugText("LBD.SetVisible()", debugMode);
+		if ( phase == 4 ) {
+			clip._visible = false;
+		}
+		else {
+			clip._visible = flag;
+		}
 	}
 	
 	//private function SetFakeStatusText() {
@@ -116,11 +121,12 @@ class gui.theck.lurkerBarDsiplay
 	}
 	
 	public function FormatTimeString(time:Number):String {
+		Debugger.DebugText("LBD.FormatTimeString() time is " + time, debugMode);
 		var timeStr:String;
 		var timeInSec:Number = Math.round(time / 100) / 10;
-		var fullSeconds:Number = Math.floor(timeInSec);
-		Debugger.DebugText("LBD.FormatTimeString() time is " + time, debugMode);
-		//var tenths:Number = 10*(timeInSec-fullSeconds)
+		//var fullSeconds:Number = Math.floor(timeInSec);
+		//var tenths:Number = 10*(timeInSec-fullSeconds);
+		var fullSeconds:Number = Math.round(timeInSec);
 		
 		if ( time == undefined ) {
 			timeStr = "N/A";

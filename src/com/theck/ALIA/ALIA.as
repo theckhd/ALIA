@@ -583,7 +583,7 @@ class com.theck.ALIA.ALIA
 			
 			// attempt to set difficulty level
 			lurkerEliteLevel = GetLurkerEliteLevel(dynel112, lurker.GetStat(1, 1) );
-			cooldownTracker.SetLurkerDifficulty(lurkerEliteLevel);
+			cooldownTracker.SetLurkerEliteLevel(lurkerEliteLevel);
 		}
 		
 		// attempt to grab helpful NPCs only under certain conditions (to try and avoid entrance grab)
@@ -796,7 +796,7 @@ class com.theck.ALIA.ALIA
 		DebugText("Lurker is casting " + spell);
 		
 		// this needs to be throttled because reticle-targetting can cause this to be triggered multiple times in one cast
-		if ( spell == stringShadowOutOfTime && shadowThrottleFlag )
+		if ( ( spell == stringShadowOutOfTime ) && shadowThrottleFlag )
 		{	
 			numShadows++;
 			shadowThrottleFlag = false;
@@ -804,8 +804,8 @@ class com.theck.ALIA.ALIA
 			// reset cooldown tracker
 			cooldownTracker.ResetShadowCooldown();
 			
-			// encounter phase logic - if 4th shadow (5th on SM or E1), set to phase 3
-			if ( numShadows > 3  && lurkerEliteLevel > 1 ) || ( numShadows > 4 ) {
+			// encounter phase logic - if 4th shadow (5th on SM), set to phase 3
+			if ( numShadows > 3  && lurkerEliteLevel > 0 ) || ( numShadows > 4 ) {
 				AdvanceEncounterState(3, "Shadow #" + numShadows );
 			}
 			// otherwise set to phase 2 (shadow 1, or crash detection)
@@ -921,7 +921,7 @@ class com.theck.ALIA.ALIA
 		
 		// stop the cooldown Tracker if it's running
 		cooldownTracker.StopTrackingCooldowns();
-		cooldownTracker.ResetEncounterPhase();
+		cooldownTracker.ResetEncounter();
 		// TODO: reset the timers too
 		
 		// reset accumulators / encounter state variable
@@ -1297,6 +1297,7 @@ class com.theck.ALIA.ALIA
 		warningController.EnableInteraction(false);
 		healthController.SetVisible(IsNYR()); 
 		podDisplay.SetVisible(IsNYR());
+		barDisplay.SetVisible(IsNYR());
 		
 		//only editable in NYR
 		if IsNYR() 
@@ -1356,13 +1357,13 @@ class com.theck.ALIA.ALIA
 				podDisplay.clip.onPress = undefined;
 				podDisplay.clip.onRelease = undefined;
 				podDisplay.SetGUIEdit(false);
-				podDisplay.SetVisible(IsNYR() );
+				podDisplay.SetVisible( IsNYR(), encounterPhase);
 				
 				barDisplay.clip.stopDrag();
 				barDisplay.clip.onPress = undefined;
 				barDisplay.clip.onRelease = undefined;
 				barDisplay.SetGUIEdit(false);
-				barDisplay.SetVisible(IsNYR() );
+				barDisplay.SetVisible(IsNYR(), encounterPhase);
 				
 				// set throttle variable
 				guiEditThrottle = false;

@@ -121,8 +121,11 @@ class gui.theck.podTargetsDisplay
 		return pos;
 	}
 		
-	public function SetVisible(flag:Boolean) {
+	public function SetVisible(flag:Boolean, phase:Number) {
 		DebugText("npcStatusDisplay.SetVisible(): flag: " + flag);
+		if ( phase == 4 ) {
+			flag = false;
+		}
 		clip._visible = flag;
 		podHeader._visible = flag;
 		for ( var i:Number = 0; i < playerList.length; i++ ) {
