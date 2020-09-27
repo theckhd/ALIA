@@ -428,6 +428,7 @@ class com.theck.ALIA.ALIA
 	
 	private function DebuggingHack():Void {
 		// stupid hack for debugging purposes only
+		SummonDrone();
 		if ( debugMode && debuggingHack.GetValue() ){ 
 			
 			PlayPersonalSpaceSoonWarningSound();
@@ -1097,6 +1098,10 @@ class com.theck.ALIA.ALIA
 	}
 	public function PlayMobilePhoneTone9() {
 		com.GameInterface.Game.Character.GetClientCharacter().AddEffectPackage("sound_fx_package_mobile_phone_button_9.xml");
+	}
+	
+	public function SummonDrone() {
+		com.GameInterface.Game.Character.GetClientCharacter().AddEffectPackage("fxpackage_gameplay_generic_auctionhouse_deliverydrone.xml");
 	}
 	
 	///////////////////////
