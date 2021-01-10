@@ -16,6 +16,7 @@ import com.Utils.ID32;
 import com.Utils.Archive;
 import com.Utils.LDBFormat;
 import com.Utils.GlobalSignal;
+import com.Utils.Signal;
 import com.theck.ALIA.lurkerCooldownTracker;
 import com.theck.ALIA.playerDebuffChecker;
 import com.theck.Utils.Common;
@@ -31,6 +32,9 @@ import flash.geom.Point;
 
 class com.theck.ALIA.ALIA 
 {
+	// Version
+	static var version:String = "1.0.1.5";
+	
 	// toggle debug messages and enable addon outisde of NYR
 	static var debugMode:Boolean = false;
 	static var debugAlwaysInNY:Boolean = false;
@@ -58,14 +62,21 @@ class com.theck.ALIA.ALIA
 	static var textDecayTime:Number = 10;
 	static var nowColor:Number = 0xFF0000;
 	
-	// These aren't needed right now, just here for reference. Values from live (pre-patch)
-	/*static var lurkerMaxHealthSM  =  3262582;
+	// lockout timers
+	static var LOCKOUT_PURE_FILTH:Number = 4000; // cast time of Pure Filth + 1 s wiggle room
+	static var LOCKOUT_SHADOW:Number = 10000; // cast time + 2 s wiggle room
+	static var LOCKOUT_FROM_BENEATH:Number = 4000; // cast time of From Beneath + 1s wiggle room
+	
+	// These aren't needed right now, just here for reference. Values from live (post-patch)
+	//static var lurkerMaxHealthSM = 3262582;
+	//static var lurkerMaxHealthE1 = 3262582;
+	//static var lurkerMaxHealthE5 = 10905556;
 	static var lurkerMaxHealthE1  =  3262582;
-	static var lurkerMaxHealthE5  = 11140440;*/
+	static var lurkerMaxHealthE5  = 11140440;
 	
-	static var lurkerMaxHealthE10 = 35158992; // new value: 43199824 checked 7/19 open beta
+	static var lurkerMaxHealthE10 = 43199824; // checked 7 / 19 open beta, re-checked 9/30. Pre-patch value was 35158992
 	
-	//static var lurkerMaxHealthE17 = 68940936; // checked 7/17 open beta
+	//static var lurkerMaxHealthE17 = 77213848; // checked 9/30
 
 	
 	// character variables
@@ -118,6 +129,8 @@ class com.theck.ALIA.ALIA
 	private var numShadows:Number;
 	private var numDownfalls:Number;
 	private var shadowThrottleFlag:Boolean = true;
+	private var fromBeneathThrottleFlag:Boolean = true;
+	private var pureFilthThrottleFlag:Boolean = true;
 	private var downfallThrottleFlag:Boolean = true;
 	private var lurkerEliteLevel:Number  = 0;
 	private var phaseThreeCooldownTimerStartFlag = false;
@@ -151,7 +164,7 @@ class com.theck.ALIA.ALIA
     }
 
 	public function Load() {
-		com.GameInterface.UtilsBase.PrintChatText("A Lurker Is Loaded");
+		com.GameInterface.UtilsBase.PrintChatText("ALIA v" + version + ": A Lurker Is Loaded");
 		DebugText("Debug mode enabled");
 		
 		// grab character
@@ -225,6 +238,9 @@ class com.theck.ALIA.ALIA
 			// connect NPC detection signals
 			ConnectVicinitySignals();
 			
+			// connect to CharacterAlive signal (for resetting lurker upon wipes)
+			ConnectCharacterAliveSignal();
+			
 			// initialize accumulators just in case
 			ResetAccumulators();
 			
@@ -256,6 +272,7 @@ class com.theck.ALIA.ALIA
 		{
 			// disconnect all signals
 			DisconnectVicinitySignals();
+			DisconnectCharacterAliveSignal();
 			ResetLurker();
 			
 			// NPC Status Display element visibility
@@ -407,7 +424,7 @@ class com.theck.ALIA.ALIA
 	
 	public function AnnounceSettings(override:Boolean) {
 		if ( debugMode || override || ( announceSettingsBool && IsNYR() ) )  {
-			com.GameInterface.UtilsBase.PrintChatText("ALIA:" + ( IsNYR() ? " NYR Detected." : "" ) + " Warning setting is " + pct_warning.GetValue() + '%, Zuberi is ' + ( showZuberi.GetValue() ? "shown" : "hidden" ) + ". Sound alert for Personal Space " + ( personalSound.GetValue() ? "enabled" : "disabled" ) + ". Sound alert for Pod cast " + ( fromBeneathSound.GetValue() ? "enabled" : "disabled" ) + ". NPC names are " + ( showNPCNames.GetValue() ? "shown" : "abbreviated" ) + "." );
+			com.GameInterface.UtilsBase.PrintChatText("ALIA v" + version + ":" + ( IsNYR() ? " NYR Detected." : "" ) + " Warning setting is " + pct_warning.GetValue() + '%, Zuberi is ' + ( showZuberi.GetValue() ? "shown" : "hidden" ) + ". Sound alert for Personal Space " + ( personalSound.GetValue() ? "enabled" : "disabled" ) + ". Sound alert for Pod cast " + ( fromBeneathSound.GetValue() ? "enabled" : "disabled" ) + ". NPC names are " + ( showNPCNames.GetValue() ? "shown" : "abbreviated" ) + "." );
 			com.GameInterface.UtilsBase.PrintChatText("ALIA: Type \"/option alia_options true\" to see slash commands.");
 			announceSettingsBool = false; // only resets on Load() or SettingsChanged()
 		}
@@ -713,8 +730,8 @@ class com.theck.ALIA.ALIA
 				updateHealthDisplay = false;
 				setTimeout(Delegate.create(this, ResetUpdateHealthDisplayFlag), 250 );
 			}
-			if ( encounterPhase < 1 && pct < 0.9995 ) { 
-				AdvanceEncounterState(1, "lurker health below 99.5%");
+			if ( encounterPhase < 1 && pct < 0.99995 ) { 
+				AdvanceEncounterState(1, "lurker health below 99.995%");
 			}
 			if ( phaseThreeCooldownTimerStartFlag && encounterPhase == 3 ) {
 				// start tracking cooldowns again as soon as lurker loses health in phase 3
@@ -796,7 +813,9 @@ class com.theck.ALIA.ALIA
 	public function LurkerCasting(spell) {
 		DebugText("Lurker is casting " + spell);
 		
-		// this needs to be throttled because reticle-targetting can cause this to be triggered multiple times in one cast
+		// Several of these calls need to be throttled because reticle-targetting can cause this signal to be triggered multiple times in one cast
+		
+		// Shadow out of Time
 		if ( ( spell == stringShadowOutOfTime ) && shadowThrottleFlag )
 		{	
 			numShadows++;
@@ -815,7 +834,7 @@ class com.theck.ALIA.ALIA
 			}
 			
 			// reset throttle flag after 10 seconds (cast is only 8 seconds)
-			setTimeout(Delegate.create(this, ResetShadowThrottleFlag), 10000);
+			setTimeout(Delegate.create(this, ResetShadowThrottleFlag), LOCKOUT_SHADOW);
 			
 			// only decay warning text on the first shadow
 			if numShadows < 2 {
@@ -823,35 +842,51 @@ class com.theck.ALIA.ALIA
 			}
 		}
 		
-		// decay warning text when PS is cast
+		// Personal Space
 		else if (spell == stringPersonalSpace)
 		{
-			warningController.DecayText(3);			
+			// decay warning text when PS is cast
+			warningController.DecayText(3);		
+			// push encounter to phase 3 (normally won't do anything, just here for crash recovery)
 			AdvanceEncounterState(3, "Personal Space");
 		}
 		
-		// decay warning text and stop blinking effect when FR cast
+		// Final Resort
 		else if (spell == stringFinalResort)
 		{
+			// decay warning text and stop blinking effect when FR cast
 			warningController.DecayText(3);
 			warningController.StopBlink();
 			warningController.SetTextColor(nowColor);
 		}
 		
-		// play a warning sound for pod casts (audible cue for cleansers)
-		else if (spell == stringFromBeneath )
+		// From Beneath You It Devours (pod)
+		else if ( (spell == stringFromBeneath ) && fromBeneathThrottleFlag )
 		{
+			fromBeneathThrottleFlag = false;
+			
+			// play a warning sound for pod casts (audible cue for cleansers)
 			if (Boolean(fromBeneathSound.GetValue())) { PlayFromBeneathWarningSound(); }
 			// enable player debuff monitoring
 			playerDebuffController.MonitorRaidForPodDebuff();
 						
 			// reset cooldown tracker
-			cooldownTracker.ResetFromBeneathCooldown();			
+			cooldownTracker.ResetFromBeneathCooldown();
+			
+			// reset throttle flag after 4 seconds (cast is only 3 seconds)
+			setTimeout(Delegate.create(this, ResetFromBeneathThrottleFlag), LOCKOUT_FROM_BENEATH);
 		}
-		else if (spell == stringPureFilth )
+		
+		// Pure Filth
+		else if ( (spell == stringPureFilth ) && pureFilthThrottleFlag )
 		{
+			pureFilthThrottleFlag = false;
+			
 			//reset cooldown tracker
 			cooldownTracker.ResetPureFilthCooldown();
+			
+			// reset throttle flag after 4 seconds (cast is only 3 seconds)
+			setTimeout(Delegate.create(this, ResetPureFilthThrottleFlag), LOCKOUT_PURE_FILTH);
 		}
 	}
 	
@@ -876,6 +911,10 @@ class com.theck.ALIA.ALIA
 	}
 
 	private function ResetShadowThrottleFlag() { shadowThrottleFlag = true; }
+	
+	private function ResetFromBeneathThrottleFlag() { fromBeneathThrottleFlag = true; }
+	
+	private function ResetPureFilthThrottleFlag() { pureFilthThrottleFlag = true; }
 	
 	private function ResetDownfallThrottleFlag() { downfallThrottleFlag = true; }
 	
@@ -939,7 +978,7 @@ class com.theck.ALIA.ALIA
 		lurker.SignalStatChanged.Connect(LurkerStatChanged, this);
 		lurker.SignalCommandStarted.Connect(LurkerCasting, this);
 		
-		// Connect deat/wipe signals to a function that resets signal connections 
+		// Connect death/wipe signals to a function that resets signal connections 
 		lurker.SignalCharacterDied.Connect(LurkerDied, this);
 		lurker.SignalCharacterDestructed.Connect(ResetLurker, this);	
 	}
@@ -947,9 +986,18 @@ class com.theck.ALIA.ALIA
 	public function DisconnectLurkerSignals() {
 		
 		// Disconnect all of the lurker-specific signals
-		lurker.SignalStatChanged.Disconnect(LurkerStatChanged, this);
+		lurker.SignalStatChanged.Disconnect(LurkerStatChanged, this);	
+		lurker.SignalCommandStarted.Disconnect(LurkerCasting, this);
 		lurker.SignalCharacterDied.Disconnect(LurkerDied, this);
-		lurker.SignalCharacterDestructed.Disconnect(ResetLurker, this);		
+		lurker.SignalCharacterDestructed.Disconnect(ResetLurker, this);	
+	}
+	
+	public function ConnectCharacterAliveSignal() {
+		m_player.SignalCharacterAlive.Connect(ResetLurker, this);
+	}
+	
+	public function DisconnectCharacterAliveSignal() {
+		m_player.SignalCharacterAlive.Disconnect(ResetLurker, this);
 	}
 	
 	public function HulkDied() {
@@ -1010,6 +1058,20 @@ class com.theck.ALIA.ALIA
 		m_player.SignalDefensiveTargetChanged.Disconnect(DetectNPCs, this);
 		
 	}
+	
+/*	// TODO: Comment once finished testing
+	public function ConnectTestSignals() {
+		
+		m_player.SignalCharacterAlive.Connect(PrintSignalCharacterAlive, this);// "SignalCharacterAlive");
+		m_player.SignalCharacterDied.Connect(PrintSignalCharacterDied, this);// "SignalCharacterDied");
+		m_player.SignalCharacterRevived.Connect(PrintSignalCharacterRevived, this);// "SignalCharacterRevived");
+		m_player.SignalCharacterTeleported.Connect(PrintSignalCharacterTeleported, this);// "SignalCharacterTeleported");
+		m_player.SignalCharacterDestructed.Connect(PrintSignalCharacterDestructed, this);// "SignalCharacterDestructed");
+		m_player.SignalToggleCombat.Connect(PrintSignalToggleCombat, this);// "SignalToggleCombat");
+		//m_player.SignalClientCharacterAlive.Connect(SignalPrinter, "SignalClientCharacterAlive");
+		//m_player.SignalCharacterDestructed.Connect(SignalPrinter, "SignalCharacterDestructed");
+		
+	}*/
 	
 	///////////////////////
 	//////  Sounds  ///////
@@ -1388,4 +1450,28 @@ class com.theck.ALIA.ALIA
 	static function DebugText(text) {
 		if (debugMode) Debugger.PrintText(text);
 	}
+	
+	//private function PrintSignalCharacterAlive() {
+		//Debugger.PrintText("SignalCharacterAlive");
+	//}
+	//
+	//private function PrintSignalCharacterDied() {
+		//Debugger.PrintText("SignalCharacterDied");
+	//}
+	//
+	//private function PrintSignalCharacterRevived() {
+		//Debugger.PrintText("SignalCharacterRevived");
+	//}
+	//
+	//private function PrintSignalCharacterTeleported() {
+		//Debugger.PrintText("SignalCharacterTeleported");
+	//}
+	//
+	//private function PrintSignalToggleCombat() {
+		//Debugger.PrintText("SignalToggleCombat");
+	//}
+	//
+	//private function PrintSignalCharacterDestructed() {
+		//Debugger.PrintText("SignalCharacterDestructed");
+	//}
 }
