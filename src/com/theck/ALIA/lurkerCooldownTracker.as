@@ -10,7 +10,7 @@ import mx.utils.Delegate;
 class com.theck.ALIA.lurkerCooldownTracker
 {
 	
-	private var debugMode:Boolean = false;
+	private var debugMode:Boolean = true;
 	
 	private var encounterPhase:Number;
 	private var lurkerEliteLevel:Number;
@@ -96,20 +96,23 @@ class com.theck.ALIA.lurkerCooldownTracker
 	
 	public function UpdateEncounterPhase( phase:Number ) 
 	{
-		Debugger.DebugText("UpdateEncounterPhase() called with phase = " + phase + "and encounterPhase = " + encounterPhase, debugMode);
+		Debugger.DebugText("UpdateEncounterPhase() called with phase = " + phase + " and encounterPhase = " + encounterPhase, debugMode);
 		if ( phase > encounterPhase ) {
 			encounterPhase = phase;
 			
 			if ( encounterPhase == 1 ) {
 				Debugger.DebugText("UpdateEncounterPhase() - Phase 1 block", debugMode);
+				
 				// on entering phase 1, set cooldown to 45 seconds
 				fromBeneathCooldownRemaining = FROM_BENEATH_COOLDOWN_FIRST;
-				Debugger.DebugText("UpdateEncounterPhase() - fromBeneathCooldownRemaining is " + fromBeneathCooldownRemaining, debugMode);
+				Debugger.DebugText("UpdateEncounterPhase() - fromBeneathCooldownRemaining set to " + fromBeneathCooldownRemaining, debugMode);
+				
 				// sometimes lurker casts pure filth stealthily, just arbitrarily set cooldown here
-				ResetPureFilthCooldown();
+				pureFilthCooldownRemaining = ( lurkerEliteLevel >= 17 ? PURE_FILTH_COOLDOWN_E17_SHORT : PURE_FILTH_COOLDOWN );
+				Debugger.DebugText("UpdateEncounterPhase() - pureFilthCooldownRemaining set to " + pureFilthCooldownRemaining, debugMode);
 				
 				// set Shadow to undefined so that we don't track it
-				// TODO: turn this into a phase 1 prediction algorithm
+				// TODO: turn this into a phase 1 prediction algorithm?
 				shadowCooldownRemaining = undefined;
 				
 				// show display and start updating
@@ -119,14 +122,17 @@ class com.theck.ALIA.lurkerCooldownTracker
 			}
 			else if ( encounterPhase == 2 ) {
 				Debugger.DebugText("UpdateEncounterPhase() - Phase 2 block", debugMode);
+				
 				// hide display and stop updating
 				StopTrackingCooldowns();
-				// clear last update time
-				lastUpdateTime = undefined;
+				
+				// clear last update time and show display
+				lastUpdateTime = undefined;				
 				barDisplay.SetVisible(false);
 			}
 			else if ( encounterPhase == 3 ) {
 				Debugger.DebugText("UpdateEncounterPhase() - Phase 3 block", debugMode);
+				
 				// Reset shadow and pod
 				firstShadowOfPhase3 = true;
 				ResetShadowCooldown();
@@ -138,6 +144,7 @@ class com.theck.ALIA.lurkerCooldownTracker
 				// clear last update time
 				lastUpdateTime = undefined;
 				barDisplay.SetVisible(true);
+				
 				// don't start tracking cooldowns - let ALIA dictate that based on lurker health changing - but do update the bar display once
 				UpdateBars();
 			}
@@ -238,7 +245,7 @@ class com.theck.ALIA.lurkerCooldownTracker
 			// if we don't have a last filth cast time, assume it's the first of a pair and set timeDiff > interval so that it invokes the short cooldown
 			if ( !lastFilthCastTime ) {
 				timeDiff = PURE_FILTH_COOLDOWN_E17_TEST_INTERVAL + 5000;
-				Debugger.DebugText("ResetPureFilthCooldown(): lastFilthCastTime undefined, setting to default: " + timeDiff, debugMode );
+				Debugger.DebugText("ResetPureFilthCooldown(): lastFilthCastTime undefined, setting timeDiff to default: " + timeDiff, debugMode );
 			}
 			// otherwise calculate the time difference
 			else {
@@ -388,8 +395,10 @@ class com.theck.ALIA.lurkerCooldownTracker
 		pureFilthCooldownRemaining = 0;
 		lastUpdateTime = undefined;
 		firstShadowOfPhase3 = false;
-		ResetFromBeneathCooldown();
-		ResetPureFilthCooldown();
+		fromBeneathCooldownRemaining = 0;
+		pureFilthCooldownRemaining = 0;
+		//ResetFromBeneathCooldown();
+		//ResetPureFilthCooldown();
 		shadowCooldownRemaining = undefined;
 		lastFilthCastTime = undefined;
 		Debugger.DebugText("ResetEncounter(): encounterPhase is now " + encounterPhase, debugMode);

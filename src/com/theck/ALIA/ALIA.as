@@ -33,7 +33,7 @@ import flash.geom.Point;
 class com.theck.ALIA.ALIA 
 {
 	// Version
-	static var version:String = "1.0.1.5";
+	static var version:String = "1.0.1.6";
 	
 	// toggle debug messages and enable addon outisde of NYR
 	static var debugMode:Boolean = false;
@@ -730,8 +730,8 @@ class com.theck.ALIA.ALIA
 				updateHealthDisplay = false;
 				setTimeout(Delegate.create(this, ResetUpdateHealthDisplayFlag), 250 );
 			}
-			if ( encounterPhase < 1 && pct < 0.99995 ) { 
-				AdvanceEncounterState(1, "lurker health below 99.995%");
+			if ( encounterPhase < 1 && pct < 0.9999995 ) { 
+				AdvanceEncounterState(1, "lurker health below 99.99995%");
 			}
 			if ( phaseThreeCooldownTimerStartFlag && encounterPhase == 3 ) {
 				// start tracking cooldowns again as soon as lurker loses health in phase 3
