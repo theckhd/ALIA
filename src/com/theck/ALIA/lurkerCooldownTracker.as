@@ -10,7 +10,7 @@ import mx.utils.Delegate;
 class com.theck.ALIA.lurkerCooldownTracker
 {
 	
-	private var debugMode:Boolean = true;
+	private var debugMode:Boolean = false;
 	
 	private var encounterPhase:Number;
 	private var lurkerEliteLevel:Number;
@@ -44,10 +44,12 @@ class com.theck.ALIA.lurkerCooldownTracker
 	static var SHADOW_COOLDOWN_E5:Number = 33000; // ???
 	
 	static var SHADOW_COOLDOWN_E10_FIRST:Number = 60000; // (2020-11-05 E10)
-	static var SHADOW_COOLDOWN_E10:Number = 90000; // (2020-11-05 E10)
+	static var SHADOW_COOLDOWN_E10:Number = 90000; // 
 	
-	static var SHADOW_COOLDOWN_E17_FIRST:Number = 90000; // 90s (2020-01-06)
-	static var SHADOW_COOLDOWN_E17:Number = 100000; // 60s (2021-01-06) 
+	static var SHADOW_COOLDOWN_E17_FIRST:Number = 70000; // 70s
+	static var SHADOW_COOLDOWN_E17:Number = 75000; // 75s (2021-01-06) 
+	
+	static var SHADOW_FROM_BENEATH_LOCKOUT:Number = 22000; // Pod seems to lock out Shadow for 22 seconds or so
 	
 	private var shadow_cooldown_first:Number;
 	private var shadow_cooldown:Number;	
@@ -221,6 +223,13 @@ class com.theck.ALIA.lurkerCooldownTracker
 		pureFilthCooldownRemaining = Math.max(pureFilthCooldownRemaining, PURE_FILTH_FROM_BENEATH_LOCKOUT);
 		
 		Debugger.DebugText("ResetFromBeneathCooldown() - Filth lockout data, cooldown is now " + pureFilthCooldownRemaining, debugMode);
+		
+		// Pod ALSO also seems to prevent Shadow from being cast for ~22s
+		Debugger.DebugText("ResetFromBeneathCooldown() - Shadow lockout data, cooldown was " + shadowCooldownRemaining, debugMode);
+		
+		shadowCooldownRemaining = Math.max(shadowCooldownRemaining, SHADOW_FROM_BENEATH_LOCKOUT);
+		
+		Debugger.DebugText("ResetFromBeneathCooldown() - Shadow lockout data, cooldown is now " + shadowCooldownRemaining, debugMode);
 	}
 	
 	public function ResetPureFilthCooldown() 

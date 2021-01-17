@@ -10,6 +10,7 @@ import com.theck.Utils.Debugger;
 class gui.theck.lurkerBarDsiplay
 {
 	private var debugMode:Boolean = false;
+	private var shadowBarEnabled:Boolean = false;
 	
     public var clip:MovieClip;
 	
@@ -36,15 +37,20 @@ class gui.theck.lurkerBarDsiplay
 		
 		fromBeneathBar = new SimpleBar("fromBeneath", clip, 0, 0, barWidths, barFontSize, podColors);
 		pureFilthBar = new SimpleBar("pureFilth", clip, 0, fromBeneathBar.barHeight, barWidths, barFontSize, pureFilthColors);
-		shadowBar = new SimpleBar("shadow", clip, 0, fromBeneathBar.barHeight + pureFilthBar.barHeight, barWidths, barFontSize);
 		
 		fromBeneathBar.SetRightText("Pod");
 		pureFilthBar.SetRightText("Pure Filth");
-		shadowBar.SetRightText("Shadow");
 		
 		//fromBeneathBar.EnableInteraction(false);
 		//pureFilthBar.EnableInteraction(false);
 		//shadowBar.EnableInteraction(false);
+		
+		// disable shadow bar for now since it's useless
+		if shadowBarEnabled {
+			shadowBar = new SimpleBar("shadow", clip, 0, fromBeneathBar.barHeight + pureFilthBar.barHeight, barWidths, barFontSize);
+			shadowBar.SetRightText("Shadow");
+		}
+		//shadowBar.SetVisible(false);
 	}
 	
 	
@@ -56,11 +62,11 @@ class gui.theck.lurkerBarDsiplay
 		
 		UpdateFromBeneathBar( barWidthInSeconds * 1000 * ( state ? 0.25 : 1 ) );
 		UpdatePureFilthBar( barWidthInSeconds * 1000 * ( state ? 0.5 : 1 ) ); 
-		UpdateShadowBar(barWidthInSeconds * 1000 * ( state ? 0.75 : 1 ) ); 
+		if shadowBarEnabled {UpdateShadowBar(barWidthInSeconds * 1000 * ( state ? 0.75 : 1 ) ) }; 
 		
 		fromBeneathBar.ShowDragText(state);
 		pureFilthBar.ShowDragText(state);
-		shadowBar.ShowDragText(state);
+		if shadowBarEnabled {shadowBar.ShowDragText(state) };
 	}
 	
 	public function ToggleBackground(flag:Boolean) {
@@ -117,7 +123,7 @@ class gui.theck.lurkerBarDsiplay
 		
 	public function UpdateShadowBar(time:Number) {
 		
-		shadowBar.Update(time / barWidthInSeconds / 1000, FormatTimeString(time), "Shadow");
+		if shadowBarEnabled { shadowBar.Update(time / barWidthInSeconds / 1000, FormatTimeString(time), "Shadow") };
 	}
 	
 	public function FormatTimeString(time:Number):String {
