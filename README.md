@@ -53,11 +53,15 @@ Changes based on phase
     - If you want to see what he's up to, you can enable him with `/setoption alia_zuberi true`
 
 ### Pod Targets Display 
+![Pod Targets Display](screens/alia_podtarget_display.png)
+
 Shows which players are about to be podded (Doomed) or are podded (Podded)
   - Uses the same color-coding as the NPC display (yellow for Doomed, red for podded)
   - Should automatically show/hide itself as needed based on whether people are podded
   
 ### Cooldown Tracking Bars
+![Cooldown Display](screens/alia_cooldown_display.png)
+
 Show remaining cooldowns on Pure Filth and From Beneath You It Devours (Pod). Automatically hides during phase 2 when they aren't relevant
 
 ## Addon Layout
