@@ -12,12 +12,16 @@ There are two audible warnings, each of which is a short sequence of beeps. They
 Currently there are five displays that appear. The displays only appear when in the Manhattan Exclusion Zone, the addon basically goes to sleep outside of that zone.
 
 
-![Screenshot of addon during encounter](screens/alia_npcs_health_2.png) ![Screenshot of addon during encounter](screens/alia_warning.png)
+
 
 ### Health % Display 
+![Health display](screens/alia_health_display.png) 
+
 Shows the Lurker's current health percentage. Remains active even when the Lurker is not targetable
 
-### Warning Display
+### Warning Display 
+![Warning Display](screens/alia_warning_display.png)
+
 Displays warnings for the following casts:
 - Shadow from Beyond (first one only, at 75%)
 - Personal Space (67%, 45%, 25%)
@@ -29,6 +33,8 @@ The warn-ahead percentage can be set with the following command (this will set i
     
 
 ### NPC Display 
+![Warning Display](screens/alia_npc_display.png)
+
 Changes based on phase
 - Phase 1: Hidden (no NPCs to track)
 - Phase 2: Shows number of Birds (B) & number of Downfalls (D) cast by current bird
