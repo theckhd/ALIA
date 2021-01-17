@@ -61,5 +61,5 @@ The displays can be moved (click & drag) in GUIEdit mode, and save their positio
 
 ## Installation
 
-To install the addon, download the zip file of the [latest release](https://github.com/theckhd/ALIA/releases) (i.e. ALIA-v0.x.zip), and extract it to your game's "\Secret World Legends\Data\Gui\Custom\Flash\" folder.
+To install the addon, download the zip file of the [latest release](https://github.com/theckhd/ALIA/releases) (i.e. ALIA-v###.zip), and extract it to your game's "\Secret World Legends\Data\Gui\Custom\Flash\" folder.
 
