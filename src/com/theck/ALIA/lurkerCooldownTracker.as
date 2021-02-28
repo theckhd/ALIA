@@ -19,8 +19,8 @@ class com.theck.ALIA.lurkerCooldownTracker
 	
 	// From Beneath You It Devours timings
 	static var FROM_BENEATH_COOLDOWN_FIRST:Number = 44000;
-	static var FROM_BENEATH_COOLDOWN:Number = 33000; // 33s minimum observed on various difficulties
-	static var FROM_BENEATH_SHADOW_LOCKOUT_E17:Number = 44000; // (2021-01-06 E17)
+	static var FROM_BENEATH_COOLDOWN:Number = 33500; // 33s minimum observed on various difficulties
+	static var FROM_BENEATH_SHADOW_LOCKOUT_E17:Number = 44000; // (2021-01-06 E17) Shadow locks out Pod, observed in multiple difficulties
 	static var FROM_BENEATH_SHADOW_LOCKOUT_E10:Number = 24500; // (2020-11-05 E10)
 	
 	// Pure Filth timings
@@ -30,7 +30,7 @@ class com.theck.ALIA.lurkerCooldownTracker
 	static var PURE_FILTH_COOLDOWN_E17_SHORT:Number = 10000; // E17 - second cast of pair
 	static var PURE_FILTH_COOLDOWN_E17_TEST_INTERVAL:Number = 15000; // E17 - minimum delay to trigger small cooldown
 	static var PURE_FILTH_COOLDOWN_E17_PHASE3_INITIAL:Number = 5000; // first cast after phase 3 starts
-	static var PURE_FILTH_SHADOW_LOCKOUT:Number = 24500; // Shadow locks out both Pure Filth and Pod, observed in multiple difficulties
+	static var PURE_FILTH_SHADOW_LOCKOUT:Number = 24500; // Shadow locks out Pure Filth, observed in multiple difficulties
 	static var PURE_FILTH_FROM_BENEATH_LOCKOUT:Number = 9500; // Pod locks out Pure Filth by 9-10s as well, observed in multiple difficulties
 	
 	// Shadow Out Of Time timings 
@@ -265,12 +265,12 @@ class com.theck.ALIA.lurkerCooldownTracker
 			// if the time difference is long enough, apply the short cooldown
 			if ( timeDiff > PURE_FILTH_COOLDOWN_E17_TEST_INTERVAL ) { 
 				pureFilthCooldownRemaining = PURE_FILTH_COOLDOWN_E17_SHORT;
-				Debugger.DebugText("ResetPureFilthCooldown(): cooldown set to short (" + PURE_FILTH_COOLDOWN_E17_SHORT + ")", debugMode );
+				Debugger.DebugText("ResetPureFilthCooldown(): cooldown set to short (" + pureFilthCooldownRemaining + ")", debugMode );
 			}
 			// otherwise apply the long cooldown
 			else {
 				pureFilthCooldownRemaining = PURE_FILTH_COOLDOWN_E17_LONG; 
-				Debugger.DebugText("ResetPureFilthCooldown(): cooldown set to long (" + PURE_FILTH_COOLDOWN_E17_LONG + ")", debugMode );
+				Debugger.DebugText("ResetPureFilthCooldown(): cooldown set to long (" + pureFilthCooldownRemaining + ")", debugMode );
 			}
 			
 			// set the last cast time to now

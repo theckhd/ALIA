@@ -11,6 +11,7 @@
 import com.GameInterface.DistributedValue;
 import com.GameInterface.Game.Character;
 import com.GameInterface.Game.Dynel;
+import com.GameInterface.Utils;
 import com.GameInterface.VicinitySystem;
 import com.Utils.ID32;
 import com.Utils.Archive;
@@ -33,7 +34,7 @@ import flash.geom.Point;
 class com.theck.ALIA.ALIA 
 {
 	// Version
-	static var version:String = "1.0.2.0";
+	static var version:String = "1.0.2.2";
 	
 	// toggle debug messages and enable addon outisde of NYR
 	static var debugMode:Boolean = false;
@@ -134,7 +135,7 @@ class com.theck.ALIA.ALIA
 	private var downfallThrottleFlag:Boolean = true;
 	private var lurkerEliteLevel:Number  = 0;
 	private var phaseThreeCooldownTimerStartFlag = false;
-	
+
 	
 	// percentages
 	static var pct_SB1_Now:Number = 0.75;
@@ -240,6 +241,7 @@ class com.theck.ALIA.ALIA
 			
 			// connect to CharacterAlive signal (for resetting lurker upon wipes)
 			ConnectCharacterAliveSignal();
+			ConnectCharacterInCombatSignal();
 			
 			// initialize accumulators just in case
 			ResetAccumulators();
@@ -273,6 +275,7 @@ class com.theck.ALIA.ALIA
 			// disconnect all signals
 			DisconnectVicinitySignals();
 			DisconnectCharacterAliveSignal();
+			DisconnectCharacterInCombatSignal();
 			ResetLurker();
 			
 			// NPC Status Display element visibility
@@ -454,6 +457,9 @@ class com.theck.ALIA.ALIA
 			barDisplay.UpdateFromBeneathBar(0.9, 20400);
 			//setTimeout(Delegate.create(this, PlayPersonalSpaceNowWarningSound), 5000);	
 		
+			DebugText("lurker ghosting is " + lurker.IsGhosting() );
+			var pos = m_player.GetPosition();
+			DebugText("x=" + pos.x + ", y=" + pos.y + ", z=" + pos.z);
 			//var team:Team = TeamInterface.GetClientTeamInfo();
 			//for (var i in team.m_TeamMembers)
 			//{
@@ -568,9 +574,9 @@ class com.theck.ALIA.ALIA
 		var dynel:Dynel = Dynel.GetDynel(dynelId);
 		var dynel112:Number = dynel.GetStat(112);
 		
-		if ( debugMode && ( dynel.GetName() == "Eldritch Guardian" || dynel.GetName() == "Zero-Point Titan" ) ) {
-			DebugText("Detected " + dynel.GetName() + " with id " + dynel.GetStat(112));
-		}
+		//if ( debugMode && ( dynel.GetName() == "Eldritch Guardian" || dynel.GetName() == "Zero-Point Titan" ) ) {
+			//DebugText("Detected " + dynel.GetName() + " with id " + dynel.GetStat(112));
+		//}
 		
 		/* Debugging stuff
 		DebugText("Dynel Id: " + dynelId);
@@ -892,7 +898,7 @@ class com.theck.ALIA.ALIA
 	
 	public function BirdCasting(spell) {
 		DebugText("Bird is casting " + spell );
-		DebugText("stringDownfall is " + stringDownfall);
+		// DebugText("stringDownfall is " + stringDownfall);
 		
 		// throttling to prevent multi-triggers
 		if ( ( spell == stringDownfall ) && downfallThrottleFlag )
@@ -998,6 +1004,24 @@ class com.theck.ALIA.ALIA
 	
 	public function DisconnectCharacterAliveSignal() {
 		m_player.SignalCharacterAlive.Disconnect(ResetLurker, this);
+	}
+	
+	public function ConnectCharacterInCombatSignal() {
+		m_player.SignalToggleCombat.Connect(PlayerEntersCombat, this);
+	}
+	public function DisconnectCharacterInCombatSignal() {
+		m_player.SignalToggleCombat.Disconnect(PlayerEntersCombat, this);
+	}
+	
+	private function PlayerEntersCombat() {
+		DebugText("SignalToggleCombat fired");
+		var pos = m_player.GetPosition();
+		if ( encounterPhase < 1 && lurker ) {
+			AdvanceEncounterState(1, "player entered combat after detecting lurker");
+		}
+		else if (  encounterPhase < 1 && ( pos.z < 560 ) ) {
+			AdvanceEncounterState(1, "player entered combat in appropriate proximity");
+		}
 	}
 	
 	public function HulkDied() {
@@ -1258,7 +1282,7 @@ class com.theck.ALIA.ALIA
 	}
     
 	private function UpdateNPCStatusDisplay() {
-		DebugText("UpdateNPCStatusDisplay(): m: " + mei.GetStatus() + " r: " + rose.GetStatus() + " a: " + alex.GetStatus() + " z: " + zuberi.GetStatus() );
+		//DebugText("UpdateNPCStatusDisplay(): m: " + mei.GetStatus() + " r: " + rose.GetStatus() + " a: " + alex.GetStatus() + " z: " + zuberi.GetStatus() );
 		npcDisplay.UpdateAll(mei.GetStatus(), rose.GetStatus(), alex.GetStatus(), zuberi.GetStatus());
 	}
 	
