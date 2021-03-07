@@ -34,7 +34,7 @@ import flash.geom.Point;
 class com.theck.ALIA.ALIA 
 {
 	// Version
-	static var version:String = "1.0.3";
+	static var version:String = "1.0.5";
 	
 	// toggle debug messages and enable addon outisde of NYR
 	static var debugMode:Boolean = false;
@@ -134,7 +134,6 @@ class com.theck.ALIA.ALIA
 	private var pureFilthThrottleFlag:Boolean = true;
 	private var downfallThrottleFlag:Boolean = true;
 	private var lurkerEliteLevel:Number  = 0;
-	private var phaseThreeCooldownTimerStartFlag = false;
 
 	
 	// percentages
@@ -253,9 +252,6 @@ class com.theck.ALIA.ALIA
 				// keep NPC display hidden
 				npcDisplay.SetVisible(false);
 				npcDisplay.ResetAlpha();
-				
-				// delay encounter state variable reset to deal with stupid GUIEdit Signals
-				//setTimeout(Delegate.create(this, ResetEncounterState), 10000);
 			}
 			// otherwise we just zoned in or wiped, so prepare for the next attempt
 			else 
@@ -460,6 +456,7 @@ class com.theck.ALIA.ALIA
 			DebugText("lurker ghosting is " + lurker.IsGhosting() );
 			var pos = m_player.GetPosition();
 			DebugText("x=" + pos.x + ", y=" + pos.y + ", z=" + pos.z);
+			
 			//var team:Team = TeamInterface.GetClientTeamInfo();
 			//for (var i in team.m_TeamMembers)
 			//{
@@ -521,7 +518,6 @@ class com.theck.ALIA.ALIA
 		
 		// test against 112 value (see DetectNPCs comment block below)
 		switch ( lurker112 ) {
-			// TODO: add cases for E17
 			case 35448:
 			case 35449:
 				elevel = 10;
@@ -543,6 +539,7 @@ class com.theck.ALIA.ALIA
 				DebugText("Lurker 112 unknown, default to story mode");
 				break;
 		}
+		// E17 has the same 112 value as E10, need to check health to differentiate
 		if ( elevel == 10 && lurkerMaxHealth > lurkerMaxHealthE10 ) {
 			elevel = 17;
 		}
@@ -618,21 +615,21 @@ class com.theck.ALIA.ALIA
 				alex = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
 				alex.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
 				UpdateNPCStatusDisplay();
-				AdvanceEncounterState(3, alex.char.GetName());
+				AdvanceEncounterState(3, alex.char.GetName()); // for crash recovery
 				DebugText("DetectNPCs(): Alex hooked");
 			}
 			else if ( !rose && ( dynel112 == rose112 ) ) {			
 				rose = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
 				rose.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
 				UpdateNPCStatusDisplay();
-				AdvanceEncounterState(3, rose.char.GetName());
+				AdvanceEncounterState(3, rose.char.GetName()); // for crash recovery
 				DebugText("DetectNPCs(): Rose hooked");
 			}
 			else if ( !mei && ( dynel112 == mei112 ) ) {
 				mei = new npcStatusMonitor(Character.GetCharacter(dynel.GetID()));
 				mei.StatusChanged.Connect(UpdateNPCStatusDisplay, this);
 				UpdateNPCStatusDisplay();
-				AdvanceEncounterState(3, mei.char.GetName());
+				AdvanceEncounterState(3, mei.char.GetName()); // for crash recovery
 				DebugText("DetectNPCs(): Mei hooked");
 			}
 		}
@@ -697,9 +694,6 @@ class com.theck.ALIA.ALIA
 			if state == 3 {
 				//force an update status on the NPCs
 				UpdateNPCStatusDisplay();
-				
-				// and tell the lurker health monitor to push the first health change to the cooldown tracker
-				phaseThreeCooldownTimerStartFlag = true;
 			}
 			// hide pod display at beginning of phase 1 (it should automatically show/hide itself afterwards)
 			if state == 1 {
@@ -728,25 +722,19 @@ class com.theck.ALIA.ALIA
 			// get lurker's health percent (decimal form)
 			var pct = GetHealthPercent(lurker);
 			
-			// throttle display updates to every 250 ms
+			// throttle display updates to every 200 ms
 			if (updateHealthDisplay && !isNaN(pct) ) {
 			
 				healthController.UpdateText( Math.round(pct * 1000) / 10 + "%");
 				
 				updateHealthDisplay = false;
-				setTimeout(Delegate.create(this, ResetUpdateHealthDisplayFlag), 250 );
+				setTimeout(Delegate.create(this, ResetUpdateHealthDisplayFlag), 200 );
 			}
 			if ( encounterPhase < 1 && pct < 0.9999995 ) { 
 				AdvanceEncounterState(1, "lurker health below 99.99995%");
 			}
-			if ( phaseThreeCooldownTimerStartFlag && encounterPhase == 3 ) {
-				// start tracking cooldowns again as soon as lurker loses health in phase 3
-				cooldownTracker.StartTrackingCooldowns();
-				phaseThreeCooldownTimerStartFlag = false;
-				DebugText("cooldownTracker Start signal sent");
-			}
 			
-			// Shadow Incoming at 26369244 (75%)
+			// Shadow Incoming at 75%
 			if ( ann_SB1_Soon && pct < ( pct_SB1_Now + pct_warning.GetValue() / 100 ) ) 
 			{
 				UpdateWarning("Shadow Soon (75%)");
@@ -758,7 +746,7 @@ class com.theck.ALIA.ALIA
 				ann_SB1_Now = false;
 			}
 			
-			// First Personal Space at 23556525 (67%)
+			// First Personal Space at 67%
 			// Limit to phase 3 b/c it's possible to push lurker past 67% + pct_warning in phase 1 and have annoying messages during phase 2.
 			if ( ann_PS1_Soon && ( encounterPhase > 2 ) && IsNYR10() && pct < ( pct_PS1_Now + pct_warning.GetValue() / 100 ) ) 
 			{
@@ -814,6 +802,24 @@ class com.theck.ALIA.ALIA
 				ann_FR_Now = false;			
 			}
 		}
+		// stat 1050 is Lurker's "interactable" or "targetable" stat. Changes to 5 at beginning of phase 2. Changes to 3 when lurker becomes active at beginning of phase 3.
+		else if ( stat == 1050 ) {
+			var statval:Number = lurker.GetStat(stat, 1);
+			DebugText("LurkerStatChanged(): stat 1050 changed to " + statval );
+			// start tracking cooldowns again as soon as lurker becomes targetable in phase 3
+			if ( statval == 3 ) {
+				DebugText("LurkerStatChanged(): Lurker became active in phase 3");
+				AdvanceEncounterState(3, "lurker became active in phase 3");
+				DebugText("LurkerStatChanged(): cooldownTracker.StartTrackingCooldowns() called");
+				cooldownTracker.StartTrackingCooldowns();
+			}
+			else if ( statval == 5 ) {
+				AdvanceEncounterState(2, "Lurker became inactive");
+			}
+		}
+		else {
+			DebugText("LurkerStatChanged(): stat = " + stat + ", amt = " + lurker.GetStat(stat, 1) );
+		}
 	}
 	
 	public function LurkerCasting(spell) {
@@ -825,19 +831,14 @@ class com.theck.ALIA.ALIA
 		if ( ( spell == stringShadowOutOfTime ) && shadowThrottleFlag )
 		{	
 			numShadows++;
+			DebugText("numShadows = " + numShadows );
 			shadowThrottleFlag = false;
 			
 			// reset cooldown tracker
 			cooldownTracker.ResetShadowCooldown();
 			
-			// encounter phase logic - if 4th shadow (5th on SM), set to phase 3
-			if ( numShadows > 3  && lurkerEliteLevel > 0 ) || ( numShadows > 4 ) {
-				AdvanceEncounterState(3, "Shadow #" + numShadows );
-			}
-			// otherwise set to phase 2 (shadow 1, or crash detection)
-			else {
-				AdvanceEncounterState(2, "a Shadow cast");
-			}
+			// encounter phase logic - set to phase 2 (primarily crash detection)
+			AdvanceEncounterState(2, "a Shadow cast");
 			
 			// reset throttle flag after 10 seconds (cast is only 8 seconds)
 			setTimeout(Delegate.create(this, ResetShadowThrottleFlag), LOCKOUT_SHADOW);
@@ -851,10 +852,11 @@ class com.theck.ALIA.ALIA
 		// Personal Space
 		else if (spell == stringPersonalSpace)
 		{
-			// decay warning text when PS is cast
-			warningController.DecayText(3);		
-			// push encounter to phase 3 (normally won't do anything, just here for crash recovery)
-			AdvanceEncounterState(3, "Personal Space");
+			if ( GetHealthPercent(lurker) < 0.68 ) {
+				
+				// decay warning text when PS is cast
+				warningController.DecayText(3);	
+			}
 		}
 		
 		// Final Resort
@@ -873,6 +875,7 @@ class com.theck.ALIA.ALIA
 			
 			// play a warning sound for pod casts (audible cue for cleansers)
 			if (Boolean(fromBeneathSound.GetValue())) { PlayFromBeneathWarningSound(); }
+			
 			// enable player debuff monitoring
 			playerDebuffController.MonitorRaidForPodDebuff();
 						
@@ -1032,9 +1035,6 @@ class com.theck.ALIA.ALIA
 		
 		// increment Hulk Counter
 		numHulks++;	
-		
-		// encounter state logic - update to phase 3 if this is the fourth hulk
-		if ( numHulks > 3 ) { AdvanceEncounterState(3, "Hulk #" + numHulks); }
 	}
 	
 	public function BirdDied() {
@@ -1049,11 +1049,6 @@ class com.theck.ALIA.ALIA
 		
 		// reset downfall counter
 		numDownfalls = 0;
-		
-		// encounter state logic - update to phase 3 if this is the third bird, or fourth on Story Mode
-		if ( numBirds > 2 && lurkerEliteLevel > 1 ) || ( numBirds > 3 ) {
-			AdvanceEncounterState(3, "Bird #" + numBirds);
-		}
 	}
 	
 	public function ConnectVicinitySignals() {

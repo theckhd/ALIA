@@ -284,7 +284,7 @@ class gui.theck.npcStatusDisplay
 			ShowZuberiStatus(false);
 		}
 		// in phase 3, use default settings
-		else if phase == 3 
+		else if phase < 4 
 		{
 			//ShowPodStatus(false);
 			ShowMeiStatus(true);
@@ -298,7 +298,7 @@ class gui.theck.npcStatusDisplay
 			meiStatusText.text = "";
 			roseStatusText.text = "";
 		}
-		else if phase > 3 
+		else if phase >= 4 
 		{			
 			// reset text fields to phase 0 values
 			SetLetterText(meiLetter, showFullNPCNames);

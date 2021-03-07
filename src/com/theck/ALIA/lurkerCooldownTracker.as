@@ -18,7 +18,7 @@ class com.theck.ALIA.lurkerCooldownTracker
 	// Timing variables - parentheticals indicate recording in which this timing was observed
 	
 	// From Beneath You It Devours timings
-	static var FROM_BENEATH_COOLDOWN_FIRST:Number = 44000;
+	static var FROM_BENEATH_COOLDOWN_FIRST_PHASE1:Number = 44000;
 	static var FROM_BENEATH_COOLDOWN:Number = 33500; // 33s minimum observed on various difficulties
 	static var FROM_BENEATH_SHADOW_LOCKOUT_E17:Number = 44000; // (2021-01-06 E17) Shadow locks out Pod, observed in multiple difficulties
 	static var FROM_BENEATH_SHADOW_LOCKOUT_E10:Number = 24500; // (2020-11-05 E10)
@@ -61,7 +61,7 @@ class com.theck.ALIA.lurkerCooldownTracker
 	private var pureFilthCooldownRemaining:Number; 
 	private var shadowCooldownRemaining:Number;
 	
-	private var firstShadowOfPhase3:Boolean = false;
+	//private var firstShadowOfPhase3:Boolean = false;
 	
 	private var barUpdateInterval:Number;
 	
@@ -85,7 +85,7 @@ class com.theck.ALIA.lurkerCooldownTracker
 		Debugger.DebugText("StartTrackingCooldowns()", debugMode);
 		
 		
-		// start polling every 250 ms
+		// start polling every 100 ms (set by POLLING_INTERVAL)
 		barUpdateInterval = setInterval(Delegate.create(this, UpdateCooldowns), POLLING_INTERVAL);		
 	}
 	
@@ -106,12 +106,10 @@ class com.theck.ALIA.lurkerCooldownTracker
 				Debugger.DebugText("UpdateEncounterPhase() - Phase 1 block", debugMode);
 				
 				// on entering phase 1, set cooldown to 45 seconds
-				fromBeneathCooldownRemaining = FROM_BENEATH_COOLDOWN_FIRST;
-				Debugger.DebugText("UpdateEncounterPhase() - fromBeneathCooldownRemaining set to " + fromBeneathCooldownRemaining, debugMode);
+				fromBeneathCooldownRemaining = FROM_BENEATH_COOLDOWN_FIRST_PHASE1;
 				
 				// sometimes lurker casts pure filth stealthily, just arbitrarily set cooldown here
 				pureFilthCooldownRemaining = ( lurkerEliteLevel >= 17 ? PURE_FILTH_COOLDOWN_E17_SHORT : PURE_FILTH_COOLDOWN );
-				Debugger.DebugText("UpdateEncounterPhase() - pureFilthCooldownRemaining set to " + pureFilthCooldownRemaining, debugMode);
 				
 				// set Shadow to undefined so that we don't track it
 				// TODO: turn this into a phase 1 prediction algorithm?
@@ -136,12 +134,12 @@ class com.theck.ALIA.lurkerCooldownTracker
 				Debugger.DebugText("UpdateEncounterPhase() - Phase 3 block", debugMode);
 				
 				// Reset shadow and pod
-				firstShadowOfPhase3 = true;
-				ResetShadowCooldown();
-				ResetFromBeneathCooldown();
+				SetShadowCooldown(shadow_cooldown_first);
+				SetFromBeneathCooldown( FROM_BENEATH_COOLDOWN );				
 				
-				// set cooldown for pure filth in phase 3
-				SetInitialPureFilthCooldownPhase3();
+				// set cooldown for pure filth in phase 3 and clear the lastFilthCastTime
+				SetPureFilthCooldown(PURE_FILTH_COOLDOWN_E17_PHASE3_INITIAL);
+				lastFilthCastTime = undefined;
 				
 				// clear last update time
 				lastUpdateTime = undefined;
@@ -170,7 +168,7 @@ class com.theck.ALIA.lurkerCooldownTracker
 		var reduxAmount:Number;
 		
 		reduxAmount = currentTime.getTime() - lastUpdateTime.getTime();
-		if reduxAmount > 250 {
+		if reduxAmount > (2 * POLLING_INTERVAL ) {
 			Debugger.DebugText("UpdateCooldowns(): anomalous reduxAmount is " + reduxAmount, debugMode);
 		}
 		
@@ -211,25 +209,33 @@ class com.theck.ALIA.lurkerCooldownTracker
 		return newCD;
 	}
 	
+	private function SetFromBeneathCooldown(cd:Number)
+	{
+		Debugger.DebugText("SetFromBeneathCooldown(): cd set to " + cd , debugMode);
+		fromBeneathCooldownRemaining = cd;
+	}
+	
 	public function ResetFromBeneathCooldown() 
 	{
 		Debugger.DebugText("ResetFromBeneathCooldown()", debugMode);
 		// this is only called when it's cast by Lurker, so it can be the default value. 
-		fromBeneathCooldownRemaining = FROM_BENEATH_COOLDOWN;
+		SetFromBeneathCooldown( FROM_BENEATH_COOLDOWN );
 		
 		// Pod also seems to prevent Pure Filth from being cast for 9-10s
-		Debugger.DebugText("ResetFromBeneathCooldown() - Filth lockout data, cooldown was " + pureFilthCooldownRemaining, debugMode);
-		
-		pureFilthCooldownRemaining = Math.max(pureFilthCooldownRemaining, PURE_FILTH_FROM_BENEATH_LOCKOUT);
-		
+		Debugger.DebugText("ResetFromBeneathCooldown() - Filth lockout data, cooldown was " + pureFilthCooldownRemaining, debugMode);		
+		SetPureFilthCooldown( Math.max(pureFilthCooldownRemaining, PURE_FILTH_FROM_BENEATH_LOCKOUT) );		
 		Debugger.DebugText("ResetFromBeneathCooldown() - Filth lockout data, cooldown is now " + pureFilthCooldownRemaining, debugMode);
 		
 		// Pod ALSO also seems to prevent Shadow from being cast for ~22s
-		Debugger.DebugText("ResetFromBeneathCooldown() - Shadow lockout data, cooldown was " + shadowCooldownRemaining, debugMode);
-		
-		shadowCooldownRemaining = Math.max(shadowCooldownRemaining, SHADOW_FROM_BENEATH_LOCKOUT);
-		
+		Debugger.DebugText("ResetFromBeneathCooldown() - Shadow lockout data, cooldown was " + shadowCooldownRemaining, debugMode);		
+		SetShadowCooldown( Math.max(shadowCooldownRemaining, SHADOW_FROM_BENEATH_LOCKOUT) );		
 		Debugger.DebugText("ResetFromBeneathCooldown() - Shadow lockout data, cooldown is now " + shadowCooldownRemaining, debugMode);
+	}
+	
+	
+	private function SetPureFilthCooldown(cd:Number) {
+		Debugger.DebugText("SetPureFilthCooldown(): cd set to " + cd , debugMode);
+		pureFilthCooldownRemaining = cd;
 	}
 	
 	public function ResetPureFilthCooldown() 
@@ -238,7 +244,7 @@ class com.theck.ALIA.lurkerCooldownTracker
 		
 		// if we're not on E17, apply standard cooldown
 		if lurkerEliteLevel < 17 {
-			pureFilthCooldownRemaining = PURE_FILTH_COOLDOWN;
+			SetPureFilthCooldown(PURE_FILTH_COOLDOWN);
 			Debugger.DebugText("ResetPureFilthCooldown(): cooldown set to standard value", debugMode );
 		}
 		else {			
@@ -264,12 +270,12 @@ class com.theck.ALIA.lurkerCooldownTracker
 						
 			// if the time difference is long enough, apply the short cooldown
 			if ( timeDiff > PURE_FILTH_COOLDOWN_E17_TEST_INTERVAL ) { 
-				pureFilthCooldownRemaining = PURE_FILTH_COOLDOWN_E17_SHORT;
+				SetPureFilthCooldown(PURE_FILTH_COOLDOWN_E17_SHORT);
 				Debugger.DebugText("ResetPureFilthCooldown(): cooldown set to short (" + pureFilthCooldownRemaining + ")", debugMode );
 			}
 			// otherwise apply the long cooldown
 			else {
-				pureFilthCooldownRemaining = PURE_FILTH_COOLDOWN_E17_LONG; 
+				SetPureFilthCooldown(PURE_FILTH_COOLDOWN_E17_LONG); 
 				Debugger.DebugText("ResetPureFilthCooldown(): cooldown set to long (" + pureFilthCooldownRemaining + ")", debugMode );
 			}
 			
@@ -277,90 +283,46 @@ class com.theck.ALIA.lurkerCooldownTracker
 			lastFilthCastTime = currentTime;
 			Debugger.DebugText("ResetPureFilthCooldown(): lastFilthCastTime set to " + currentTime, debugMode );
 		}
-		
-/*		// old code, delete later. or not. I'm not your dad.
-		if lurkerEliteLevel < 17 {
-			pureFilthCooldownRemaining = PURE_FILTH_COOLDOWN;
-		}
-		else {
-			// E17 casts come in pairs, but it seems like the game tracks the time since the last pure filth cast
-			// to determine whether to apply the "short" (11s) or "long" (22s) version of the cooldown.
-			// I've observed cases where the interval is 23s / 16s / 12s (because the second PF was delayed by Personal Space, 
-			// suggesting that if it's been >15s since the last pure filth, it will apply the short cooldown
-			
-			var currentTime:Date = new Date();
-			var timeDiff:Number;
-			
-			// if we don't have a last filth cast time, assume it's the first of a pair and set timeDiff > interval
-			if ( !lastFilthCastTime ) {
-				timeDiff = PURE_FILTH_COOLDOWN_E17_TEST_INTERVAL + 1;
-			}
-			// otherwise calculate the time difference
-			else {
-				timeDiff = currentTime.getTime() - lastFilthCastTime.getTime();
-			}
-			
-			// if the time difference is less than the cast time (plus a little wiggle room for latency/etc.), ignore. 
-			// this is needed b/c every time you re-target the boss with the reticle, the game generates another "casting" call
-			if ( timeDiff > PURE_FILTH_CAST_TIME + 500 ) {
-				
-				// if the time difference is long enough, apply the short cooldown
-				if ( timeDiff > PURE_FILTH_COOLDOWN_E17_TEST_INTERVAL ) { 
-					pureFilthCooldownRemaining = PURE_FILTH_COOLDOWN_E17_SHORT;
-				}
-				// otherwise apply the long cooldown
-				else {
-					pureFilthCooldownRemaining = PURE_FILTH_COOLDOWN_E17_LONG; 
-				}
-			}
-			
-			// set the last cast time to now
-			lastFilthCastTime = currentTime;
-		}*/
 	}
-	
-	public function SetInitialPureFilthCooldownPhase3()
-	{
-		// this just sets the cooldown to 5 seconds at the beginning of phase 3 and clears the "last cast" time so we get the short cooldown
-		pureFilthCooldownRemaining = PURE_FILTH_COOLDOWN_E17_PHASE3_INITIAL;
-		lastFilthCastTime = undefined;
+
+	private function SetShadowCooldown(cd:Number) {
+		Debugger.DebugText("SetShadowCooldown(): cd set to " + cd , debugMode);
+		shadowCooldownRemaining = cd;
 	}
 	
 	public function ResetShadowCooldown() 
 	{
-		// This one varies per difficulty (see SetLurkerEliteLevel()) and based on whether it's the first cast in phase 3 or not
-		if ( firstShadowOfPhase3 ) {
-			shadowCooldownRemaining = shadow_cooldown_first;
-			firstShadowOfPhase3 = false;
-			Debugger.DebugText("ResetShadowCooldown() - first shadow cooldown is " + shadow_cooldown_first, debugMode);
-		}
-		else {
-			shadowCooldownRemaining = shadow_cooldown;
+		// only bother with this in phase 3
+		if ( encounterPhase > 2 ) {
+			
+			// set cooldown - varies per difficulty (see SetLurkerEliteLevel())
+			// Note: first Shadow cooldown in phase 3 now handled in UpdateEncounterPhase
+			SetShadowCooldown( shadow_cooldown );
 			Debugger.DebugText("ResetShadowCooldown() - 2+ shadow cooldown is " + shadow_cooldown, debugMode);
-		}
+			
+			
+			// Shadow seems to lock out Pure Filth and Pod when cast			
+			// The pod lockout appears to vary with difficulty (~25s on SM & E10, ~44s on E17, untested on E1/E5 yet)
+			Debugger.DebugText("ResetShadowCooldown() - Pod lockout data, cooldown was " + fromBeneathCooldownRemaining, debugMode);			
+			if ( lurkerEliteLevel >= 17 ) {
+				SetFromBeneathCooldown(Math.max(fromBeneathCooldownRemaining, FROM_BENEATH_SHADOW_LOCKOUT_E17));
+			}
+			else {
+				SetFromBeneathCooldown(Math.max(fromBeneathCooldownRemaining, FROM_BENEATH_SHADOW_LOCKOUT_E10));
+			}			
+			Debugger.DebugText("ResetShadowCooldown() - Pod lockout data, cooldown is now " + fromBeneathCooldownRemaining, debugMode);
+			
+			
+			// the filth lockout appears to be ~25s on all difficulties
+			Debugger.DebugText("ResetShadowCooldown() - Filth lockout data, cooldown was " + pureFilthCooldownRemaining, debugMode);			
+			SetPureFilthCooldown( Math.max(pureFilthCooldownRemaining, PURE_FILTH_SHADOW_LOCKOUT));	
+			Debugger.DebugText("ResetShadowCooldown() - Filth lockout data, cooldown is now " + pureFilthCooldownRemaining, debugMode);
+		}		
 		
-		// Shadow seems to lock out Pure Filth and Pod when cast
-		
-		// The pod lockout appears to vary with difficulty (~25s on SM & E10, ~44s on E17, untested on E1/E5 yet)
-		Debugger.DebugText("ResetShadowCooldown() - Pod lockout data, cooldown was " + fromBeneathCooldownRemaining, debugMode);
-		
-		if ( lurkerEliteLevel >= 17 ) {
-			fromBeneathCooldownRemaining = Math.max(fromBeneathCooldownRemaining, FROM_BENEATH_SHADOW_LOCKOUT_E17);
-		}
 		else {
-			fromBeneathCooldownRemaining = Math.max(fromBeneathCooldownRemaining, FROM_BENEATH_SHADOW_LOCKOUT_E10);
+			// Just throwing a debug line in here to make sure this is working
+			Debugger.DebugText("ResetShadowCooldown() - shadow called in phase 1 or 2, nothing done", debugMode);
 		}
-		
-		Debugger.DebugText("ResetShadowCooldown() - Pod lockout data, cooldown is now " + fromBeneathCooldownRemaining, debugMode);
-		
-		// the filth lockout appears to be ~25s on all difficulties
-		Debugger.DebugText("ResetShadowCooldown() - Filth lockout data, cooldown was " + pureFilthCooldownRemaining, debugMode);
-		
-		pureFilthCooldownRemaining = Math.max(pureFilthCooldownRemaining, PURE_FILTH_SHADOW_LOCKOUT);
-		
-		Debugger.DebugText("ResetShadowCooldown() - Filth lockout data, cooldown is now " + pureFilthCooldownRemaining, debugMode);
-		
-		
 	}
 	
 	public function SetLurkerEliteLevel(diff:Number) 
@@ -401,13 +363,9 @@ class com.theck.ALIA.lurkerCooldownTracker
 	public function ResetEncounter()
 	{
 		encounterPhase = 0;
-		pureFilthCooldownRemaining = 0;
-		lastUpdateTime = undefined;
-		firstShadowOfPhase3 = false;
 		fromBeneathCooldownRemaining = 0;
 		pureFilthCooldownRemaining = 0;
-		//ResetFromBeneathCooldown();
-		//ResetPureFilthCooldown();
+		lastUpdateTime = undefined;
 		shadowCooldownRemaining = undefined;
 		lastFilthCastTime = undefined;
 		Debugger.DebugText("ResetEncounter(): encounterPhase is now " + encounterPhase, debugMode);
