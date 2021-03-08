@@ -60,9 +60,7 @@ class com.theck.ALIA.lurkerCooldownTracker
 	private var fromBeneathCooldownRemaining:Number; 
 	private var pureFilthCooldownRemaining:Number; 
 	private var shadowCooldownRemaining:Number;
-	
-	//private var firstShadowOfPhase3:Boolean = false;
-	
+		
 	private var barUpdateInterval:Number;
 	
 	private var lastUpdateTime:Date;
