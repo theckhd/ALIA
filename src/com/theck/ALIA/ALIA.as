@@ -27,6 +27,7 @@ import gui.theck.TextFieldController;
 import gui.theck.npcStatusDisplay;
 import gui.theck.lurkerBarDsiplay;
 import gui.theck.podTargetsDisplay;
+import gui.theck.SimpleCounter;
 import mx.utils.Delegate;
 import flash.geom.Point;
 
@@ -34,7 +35,7 @@ import flash.geom.Point;
 class com.theck.ALIA.ALIA 
 {
 	// Version
-	static var version:String = "1.0.5";
+	static var version:String = "1.0.6";
 	
 	// toggle debug messages and enable addon outisde of NYR
 	static var debugMode:Boolean = false;
@@ -98,6 +99,7 @@ class com.theck.ALIA.ALIA
 	private var n_pos:flash.geom.Point;
 	private var p_pos:flash.geom.Point;
 	private var b_pos:flash.geom.Point;
+	private var t_pos:flash.geom.Point;
 	private var warningController:TextFieldController;
 	private var healthController:TextFieldController;
 	private var updateHealthDisplay:Boolean;
@@ -107,6 +109,7 @@ class com.theck.ALIA.ALIA
 	private var podDisplay:podTargetsDisplay;
 	private var barDisplay:lurkerBarDsiplay;
 	private var cooldownTracker:lurkerCooldownTracker;
+	private var countdownTimer:SimpleCounter;
 	
 	// logic flags and accumulators
 	private var ann_SB1_Soon:Boolean;
@@ -352,6 +355,9 @@ class com.theck.ALIA.ALIA
 		b_pos = config.FindEntry("alia_barPosition", new Point(1100, 600));
 		barDisplay.SetPos(b_pos);
 		
+		t_pos = config.FindEntry("alia_timerPosition", new Point(700, 600));
+		countdownTimer.SetPos(t_pos);
+		
 		// set options
 		// the arguments here are the names of the settings within Config (not the slash command strings)
 		pct_warning.SetValue(config.FindEntry("alia_pct_warning", 3));
@@ -374,6 +380,7 @@ class com.theck.ALIA.ALIA
 		config.AddEntry("alia_npcPosition", n_pos);
 		config.AddEntry("alia_podPosition", p_pos);
 		config.AddEntry("alia_barPosition", b_pos);
+		config.AddEntry("alia_timerPosition", t_pos);
 		
 		// save options
 		// the arguments here are the names of the settings within Config (not the slash command strings)
@@ -690,14 +697,20 @@ class com.theck.ALIA.ALIA
 			// push this to the cooldown tracker
 			cooldownTracker.UpdateEncounterPhase(encounterPhase);
 			
+			// if we've just started the encounter
+			if state == 1 {
+				// hide pod display at beginning of phase 1 (it should automatically show/hide itself afterwards)
+				podDisplay.SetVisible(false);
+				
+				//start countdown timer
+				countdownTimer.SetTime(10,00,00);
+				countdownTimer.StartCounting();
+			}
+			
 			// if we've moved to phase 3
 			if state == 3 {
 				//force an update status on the NPCs
 				UpdateNPCStatusDisplay();
-			}
-			// hide pod display at beginning of phase 1 (it should automatically show/hide itself afterwards)
-			if state == 1 {
-				podDisplay.SetVisible(false);
 			}
 		}
 	}
@@ -730,8 +743,8 @@ class com.theck.ALIA.ALIA
 				updateHealthDisplay = false;
 				setTimeout(Delegate.create(this, ResetUpdateHealthDisplayFlag), 200 );
 			}
-			if ( encounterPhase < 1 && pct < 0.9999995 ) { 
-				AdvanceEncounterState(1, "lurker health below 99.99995%");
+			if ( encounterPhase < 1 && pct < 0.9999999995 ) { 
+				AdvanceEncounterState(1, "lurker health below 99.99999995%");
 			}
 			
 			// Shadow Incoming at 75%
@@ -950,6 +963,7 @@ class com.theck.ALIA.ALIA
 		
 		// set encounterPhase to 4 to signify death
 		AdvanceEncounterState( 4, "LurkerDied()");
+		countdownTimer.StopCounting();
 	}
 	
 	public function ResetLurker() {
@@ -978,6 +992,7 @@ class com.theck.ALIA.ALIA
 		ResetEncounterState();
 		currentBird = undefined;
 		currentHulk = undefined;
+		countdownTimer.StopCounting();
 	}
 	
 	public function ConnectLurkerSignals() {	
@@ -1235,6 +1250,13 @@ class com.theck.ALIA.ALIA
 			DebugText("Cooldown Tracker created");
 		}
 		
+		// if the countdown timer doesn't exist, create it
+		if ( !countdownTimer ) {
+			countdownTimer = new SimpleCounter("ALIA", m_swfRoot, 30);
+			countdownTimer.SetTime(10, 0, 0);
+			DebugText("Countdown Timer created");
+		}
+		
 		// Set default text
         warningController.UpdateText("A Lurker Is Announced");
 		warningController.DecayText(textDecayTime);
@@ -1346,18 +1368,33 @@ class com.theck.ALIA.ALIA
     }
 	
     public function BarStartDrag() {
-		DebugText("barStartDrag called");
+		DebugText("BarStartDrag called");
         barDisplay.clip.startDrag();
     }
 
     public function BarStopDrag() {
-		DebugText("barStopDrag called");
+		DebugText("BarStopDrag called");
         barDisplay.clip.stopDrag();
 		
 		// grab position for config storage on Deactivate()
         b_pos = Common.getOnScreen(barDisplay.clip); 
 		
 		DebugText("barStopDrag: x: " + b_pos.x + "  y: " + b_pos.y);
+    }
+	
+    public function TimerStartDrag() {
+		DebugText("TimerStartDrag called");
+        countdownTimer.clip.startDrag();
+    }
+
+    public function TimerStopDrag() {
+		DebugText("TimerStopDrag called");
+        countdownTimer.clip.stopDrag();
+		
+		// grab position for config storage on Deactivate()
+        t_pos = Common.getOnScreen(countdownTimer.clip); 
+		
+		DebugText("TimerStopDrag: x: " + t_pos.x + "  y: " + t_pos.y);
     }
 	
 	
@@ -1384,6 +1421,7 @@ class com.theck.ALIA.ALIA
 		healthController.SetVisible(IsNYR()); 
 		podDisplay.SetVisible(IsNYR());
 		barDisplay.SetVisible(IsNYR());
+		countdownTimer.SetVisible(IsNYR());
 		
 		//only editable in NYR
 		if IsNYR() 
@@ -1415,6 +1453,10 @@ class com.theck.ALIA.ALIA
 				barDisplay.clip.onPress = Delegate.create(this, BarStartDrag);
 				//barDisplay.fromBeneathBar.onP
 				barDisplay.clip.onRelease = Delegate.create(this, BarStopDrag);
+				
+				countdownTimer.SetGUIEdit(true);
+				countdownTimer.clip.onPress = Delegate.create(this, TimerStartDrag);
+				countdownTimer.clip.onRelease = Delegate.create(this, TimerStopDrag);
 				
 				// set throttle variable - this prevents extra spam when the game calls GuiEdit event with false argument, which it seems to like to do ALL THE DAMN TIME
 				guiEditThrottle = true;
@@ -1450,6 +1492,12 @@ class com.theck.ALIA.ALIA
 				barDisplay.clip.onRelease = undefined;
 				barDisplay.SetGUIEdit(false);
 				barDisplay.SetVisible(IsNYR(), encounterPhase);
+				
+				countdownTimer.clip.stopDrag();
+				countdownTimer.clip.onPress = undefined;
+				countdownTimer.clip.onRelease = undefined;
+				countdownTimer.SetGUIEdit(false);
+				countdownTimer.SetVisible(IsNYR());
 				
 				// set throttle variable
 				guiEditThrottle = false;
