@@ -85,33 +85,34 @@ class gui.theck.SimpleCounter
 		
 		var mins = Math.floor(time / 1000 / 60 );
 		var secs = Math.floor( ( time - (60 * 1000 * mins) ) / 1000 );
-		var csecs = Math.round( ( time - 60 * 1000 * mins - 1000 * secs ) / 10 );
+		var dsecs = Math.floor( ( time - 60 * 1000 * mins - 1000 * secs ) / 100 );
 		
 		var secsString:String;
-		var csecsString:String;
+		var dsecsString:String;
 		
-		if secs > 0 {
-			secsString = secs.toString();			
-		}
-		else {
-			secsString = "00";
-		}
-		
-		if csecs > 0 {
-			csecsString = csecs.toString();			
-		}
-		else {
-			csecsString = "00";
-		}
+		secsString = ParseSeconds(secs);
+		dsecsString = dsecs.toString();
 		
 		if ( mins > 0 || secs > 30 ) {
 			outputText = mins.toString() + ":" + secsString;
 		}
 		else {
-			outputText = secsString + "." + csecsString;
+			outputText = secsString + "." + dsecsString;
 		}
 		
 		return outputText;
+	}
+	
+	private function ParseSeconds(time:Number):String {
+		if time >= 10 {
+			return time.toString();
+		}
+		else if ( time < 10 && time > 0 ) {
+			return "0" + time.toString();
+		}
+		else {
+			return "00";
+		}
 	}
 	
 	

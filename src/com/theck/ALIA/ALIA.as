@@ -35,7 +35,7 @@ import flash.geom.Point;
 class com.theck.ALIA.ALIA 
 {
 	// Version
-	static var version:String = "1.0.6";
+	static var version:String = "1.0.7";
 	
 	// toggle debug messages and enable addon outisde of NYR
 	static var debugMode:Boolean = false;
@@ -463,6 +463,10 @@ class com.theck.ALIA.ALIA
 			DebugText("lurker ghosting is " + lurker.IsGhosting() );
 			var pos = m_player.GetPosition();
 			DebugText("x=" + pos.x + ", y=" + pos.y + ", z=" + pos.z);
+			
+			countdownTimer.StopCounting();
+			countdownTimer.SetTime(0, 35, 0);
+			countdownTimer.StartCounting();
 			
 			//var team:Team = TeamInterface.GetClientTeamInfo();
 			//for (var i in team.m_TeamMembers)
