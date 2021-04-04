@@ -9,7 +9,7 @@ There are two audible warnings, each of which is a short sequence of beeps. They
 
 ## Displays
 
-Currently there are five displays that appear. The displays only appear when in the Manhattan Exclusion Zone, the addon basically goes to sleep outside of that zone.
+Currently there are six displays that appear. The displays only appear when in the Manhattan Exclusion Zone, the addon basically goes to sleep outside of that zone.
 
 
 
@@ -62,7 +62,12 @@ Shows which players are about to be podded (Doomed) or are podded (Podded)
 ### Cooldown Tracking Bars
 ![Cooldown Display](screens/alia_cooldown_display.png)
 
-Show remaining cooldowns on Pure Filth and From Beneath You It Devours (Pod). Automatically hides during phase 2 when they aren't relevant
+Show remaining cooldowns on Pure Filth and From Beneath You It Devours (Pod). Automatically hides during phase 2 when they aren't relevant.
+
+### Countdown Timer
+![Countdown Display](screens/alia_countdown_display.png)
+
+Ten-minute countdown timer to help gague progress. Also tomake those last-second kills even more epic.
 
 ## Addon Layout
 The displays can be moved (click & drag) in GUIEdit mode, and save their position between sessions.
