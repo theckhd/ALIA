@@ -67,7 +67,7 @@ Show remaining cooldowns on Pure Filth and From Beneath You It Devours (Pod). Au
 ### Countdown Timer
 ![Countdown Display](screens/alia_countdown_display.PNG)
 
-Ten-minute countdown timer to help gague progress. Also tomake those last-second kills even more epic.
+Ten-minute countdown timer to help gague progress. Also to make those last-second kills even more epic.
 
 ## Addon Layout
 The displays can be moved (click & drag) in GUIEdit mode, and save their position between sessions.
