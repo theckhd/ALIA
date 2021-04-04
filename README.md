@@ -65,7 +65,7 @@ Shows which players are about to be podded (Doomed) or are podded (Podded)
 Show remaining cooldowns on Pure Filth and From Beneath You It Devours (Pod). Automatically hides during phase 2 when they aren't relevant.
 
 ### Countdown Timer
-![Countdown Display](screens/alia_countdown_display.png)
+![Countdown Display](screens/alia_countdown_display.PNG)
 
 Ten-minute countdown timer to help gague progress. Also tomake those last-second kills even more epic.
 
