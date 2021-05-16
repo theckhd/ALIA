@@ -35,7 +35,7 @@ import flash.geom.Point;
 class com.theck.ALIA.ALIA 
 {
 	// Version
-	static var version:String = "1.0.7";
+	static var version:String = "1.0.8.1";
 	
 	// toggle debug messages and enable addon outisde of NYR
 	static var debugMode:Boolean = false;
@@ -153,6 +153,7 @@ class com.theck.ALIA.ALIA
 	private var fromBeneathSound:DistributedValue;
 	private var showSlashCommands:DistributedValue;
 	private var showNPCNames:DistributedValue;
+	private var showShadowBar:DistributedValue;
 	private var debuggingHack:DistributedValue;
 
 	//////////////////////////////
@@ -303,6 +304,7 @@ class com.theck.ALIA.ALIA
 		personalSound = DistributedValue.Create("alia_ps_sound");
 		fromBeneathSound = DistributedValue.Create("alia_pod_sound");
 		showNPCNames = DistributedValue.Create("alia_shownames");
+		showShadowBar = DistributedValue.Create("alia_shadowbar");
 		
 		// new options get added above this line
 		showSlashCommands = DistributedValue.Create("alia_options");
@@ -317,6 +319,7 @@ class com.theck.ALIA.ALIA
 		personalSound.SignalChanged.Connect(SettingsChanged, this);
 		fromBeneathSound.SignalChanged.Connect(SettingsChanged, this);
 		showNPCNames.SignalChanged.Connect(SettingsChanged, this);
+		showShadowBar.SignalChanged.Connect(SettingsChanged, this);
 		
 		// new options get added above this line
 		showSlashCommands.SignalChanged.Connect(AnnounceSlashCommands, this);
@@ -330,7 +333,8 @@ class com.theck.ALIA.ALIA
 		showZuberi.SignalChanged.Disconnect(SettingsChanged, this);
 		personalSound.SignalChanged.Disconnect(SettingsChanged, this);
 		fromBeneathSound.SignalChanged.Disconnect(SettingsChanged, this);
-		showNPCNames.SignalChanged.Disconnect(SettingsChanged, this);		
+		showNPCNames.SignalChanged.Disconnect(SettingsChanged, this);
+		showShadowBar.SignalChanged.Disconnect(SettingsChanged, this);
 		
 		// new options get added above this line
 		showSlashCommands.SignalChanged.Disconnect(AnnounceSlashCommands, this);
@@ -364,7 +368,8 @@ class com.theck.ALIA.ALIA
 		showZuberi.SetValue( config.FindEntry("alia_showZuberi", false));
 		personalSound.SetValue( config.FindEntry("alia_personalSound", true));
 		fromBeneathSound.SetValue( config.FindEntry("alia_fromBeneathSound", true));
-		showNPCNames.SetValue( config.FindEntry("alia_showNPCNames", false));
+		showNPCNames.SetValue( config.FindEntry("alia_showNPCNames", true));
+		showShadowBar.SetValue( config.FindEntry("alia_shadowbar", false) );
 		
 		// new options get added above this line
 		debuggingHack.SetValue( false );
@@ -389,6 +394,7 @@ class com.theck.ALIA.ALIA
 		config.AddEntry("alia_personalSound", personalSound.GetValue());
 		config.AddEntry("alia_fromBeneathSound", fromBeneathSound.GetValue());
 		config.AddEntry("alia_showNPCNames", showNPCNames.GetValue());
+		config.AddEntry("alia_shadowbar", showShadowBar.GetValue());
 		
 		return config
 	}
@@ -423,6 +429,11 @@ class com.theck.ALIA.ALIA
 			npcDisplay.ChangeLetterMode(showNPCNames.GetValue());
 			GuiEdit();
 			break;
+		case "alia_shadowbar":
+			showShadowBar = dv;
+			barDisplay.EnableShadowBar( showShadowBar.GetValue() );
+			GuiEdit();
+			break;
 		}
 		
 		AnnounceSettings(loadFinished);
@@ -430,7 +441,7 @@ class com.theck.ALIA.ALIA
 	
 	public function AnnounceSettings(override:Boolean) {
 		if ( debugMode || override || ( announceSettingsBool && IsNYR() ) )  {
-			com.GameInterface.UtilsBase.PrintChatText("ALIA v" + version + ":" + ( IsNYR() ? " NYR Detected." : "" ) + " Warning setting is " + pct_warning.GetValue() + '%, Zuberi is ' + ( showZuberi.GetValue() ? "shown" : "hidden" ) + ". Sound alert for Personal Space " + ( personalSound.GetValue() ? "enabled" : "disabled" ) + ". Sound alert for Pod cast " + ( fromBeneathSound.GetValue() ? "enabled" : "disabled" ) + ". NPC names are " + ( showNPCNames.GetValue() ? "shown" : "abbreviated" ) + "." );
+			com.GameInterface.UtilsBase.PrintChatText("ALIA v" + version + ":" + ( IsNYR() ? " NYR Detected." : "" ) + " Warning setting is " + pct_warning.GetValue() + '%, Zuberi is ' + ( showZuberi.GetValue() ? "shown" : "hidden" ) + ". Sound alert for Personal Space " + ( personalSound.GetValue() ? "enabled" : "disabled" ) + ". Sound alert for Pod cast " + ( fromBeneathSound.GetValue() ? "enabled" : "disabled" ) + ". NPC names are " + ( showNPCNames.GetValue() ? "shown" : "abbreviated" ) + ". Experimental Shadow bar is " + ( showShadowBar.GetValue() ? "enabled" : "disabled" ) + "." );
 			com.GameInterface.UtilsBase.PrintChatText("ALIA: Type \"/option alia_options true\" to see slash commands.");
 			announceSettingsBool = false; // only resets on Load() or SettingsChanged()
 		}
@@ -444,6 +455,7 @@ class com.theck.ALIA.ALIA
 			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_shownames (true/false)\" will toggle full NPC names.");
 			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_ps_sound (true/false)\" will enable Personal Space warning sound.");
 			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_pod_sound (true/false)\" will enable From Beneath You It Devours warning sound.");
+			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_shadowbar (true/false)\" will enable an experimental Shadow from Beyond timer bar.");
 			
 		}
 		dv.SetValue(false);
@@ -454,30 +466,26 @@ class com.theck.ALIA.ALIA
 		SummonDrone();
 		if ( debugMode && debuggingHack.GetValue() ){ 
 			
-			PlayPersonalSpaceSoonWarningSound();
+			//PlayPersonalSpaceSoonWarningSound();
 			
 			
-			barDisplay.UpdateFromBeneathBar(0.9, 20400);
+			//barDisplay.UpdateFromBeneathBar(0.9, 20400);
 			//setTimeout(Delegate.create(this, PlayPersonalSpaceNowWarningSound), 5000);	
 		
-			DebugText("lurker ghosting is " + lurker.IsGhosting() );
-			var pos = m_player.GetPosition();
-			DebugText("x=" + pos.x + ", y=" + pos.y + ", z=" + pos.z);
+			//DebugText("lurker ghosting is " + lurker.IsGhosting() );
+			//var pos = m_player.GetPosition();
+			//DebugText("x=" + pos.x + ", y=" + pos.y + ", z=" + pos.z);
 			
-			countdownTimer.StopCounting();
-			countdownTimer.SetTime(0, 35, 0);
-			countdownTimer.StartCounting();
+			//countdownTimer.StopCounting();
+			//countdownTimer.SetTime(0, 35, 0);
+			//countdownTimer.StartCounting();
 			
-			//var team:Team = TeamInterface.GetClientTeamInfo();
-			//for (var i in team.m_TeamMembers)
-			//{
-				//var teamMember = team.m_TeamMembers[i];
-				//DebugText(Character.GetCharacter(teamMember["m_CharacterId"]).GetName());
-			//}
 			//UtilsBase.PrintChatText(LDBFormat.LDBGetText(50210, 9463770));
+			//playerDebuffController.DEBUG_PrintDebuffsOnRaid();
 			
 			// do not put code below this line
-		} 
+		}
+		
 		debuggingHack.SetValue( false );
 	}
 	
@@ -913,6 +921,10 @@ class com.theck.ALIA.ALIA
 			
 			// reset throttle flag after 4 seconds (cast is only 3 seconds)
 			setTimeout(Delegate.create(this, ResetPureFilthThrottleFlag), LOCKOUT_PURE_FILTH);
+			
+			//// Debugging
+			//playerDebuffController.DEBUG_PrintDebuffsOnRaid(); // TODO: DELETE this whole section
+			//setTimeout(Delegate.create(this, playerDebuffController.DEBUG_PrintDebuffsOnRaid), 10000);
 		}
 	}
 	

@@ -5,14 +5,15 @@
  * Much of this code stolen from Xeio's TargetLowest addon
  */
 
+//import com.GameInterface.CharacterCreation.CharacterCreation;
 import com.GameInterface.Game.Character;
 import com.GameInterface.Game.Raid;
 import com.GameInterface.Game.Team;
 import com.GameInterface.Game.TeamInterface;
 import com.theck.ALIA.poddedPlayerEntry;
 import com.theck.Utils.Debugger;
-import com.Utils.Signal;
-//import com.Utils.LDBFormat;
+//import com.Utils.Signal;
+import com.Utils.LDBFormat;
 import gui.theck.podTargetsDisplay;
 import mx.utils.Delegate;
 
@@ -37,7 +38,7 @@ class com.theck.ALIA.playerDebuffChecker
 	
 	public var podDisplay:podTargetsDisplay;
 	
-	public var DebuffStatusChanged:Signal;
+	//public var DebuffStatusChanged:Signal;
 
 	
 
@@ -45,7 +46,7 @@ class com.theck.ALIA.playerDebuffChecker
 	{		
 		podDisplay = display;
 		
-        DebuffStatusChanged = new Signal();		
+        //DebuffStatusChanged = new Signal();		
 		
 		victimArray = new Array();
 	}
@@ -154,22 +155,11 @@ class com.theck.ALIA.playerDebuffChecker
 		else {
 			RemovePlayerFromArray(char);
 		}
-			
-/*			// verbose debugging - report all debuffs
-			if ( debugMode ) {
-				var buffString:String = " ";
-				for ( var j in char.m_BuffList ) {
-					buffString += LDBFormat.LDBGetText( 50210, Number(j) ) + " (" + j + "), ";
-				}
-				Debugger.DebugText("pDC.CheckPlayerForDebuffs(): debuff list for " + char.GetName() + ": " + buffString, debugMode );
-				
-				
-				buffString = " ";
-				for ( var j in char.m_InvisibleBuffList ) {
-					buffString += LDBFormat.LDBGetText( 50210, Number(j) ) + " (" + j + "), ";
-				}
-				Debugger.DebugText("pDC.CheckPlayerForDebusffs(): invisible debuff list for " + char.GetName() + ": " + buffString, debugMode );
-			}*/
+		
+/*		if ( debugMode ) {	
+			DEBUG_PrintDebuffsOnPlayer( char );
+		}*/
+
 	}
 	
 	private function AddVictimToArray(victim:poddedPlayerEntry)
@@ -185,6 +175,10 @@ class com.theck.ALIA.playerDebuffChecker
 		}
 		if ( !foundInArray ) {
 			victimArray.push(victim);
+			
+			//// debugging
+			//var currentTime:Date = new Date();
+			//Debugger.PrintText("pDC.AddVictimToArray: " + victim.GetName() + " " + currentTime.getSeconds() + "s and " + currentTime.getMilliseconds() + "s");
 		}
 	}
 	
@@ -219,6 +213,55 @@ class com.theck.ALIA.playerDebuffChecker
 		
 	static function DebugText(text) {
 		if (debugMode) Debugger.PrintText("pDC." + text);
+	}
+	
+	public function DEBUG_PrintDebuffsOnPlayer(char:Character) {
+		
+		// verbose debugging - report all debuffs
+		var buffString:String = " ";
+		for ( var j in char.m_BuffList ) {
+			buffString += LDBFormat.LDBGetText( 50210, Number(j) ) + " (" + j + "), ";
+		}
+		Debugger.DebugText("pDC.DEBUG_PrintDebuffsOnPlayer(): debuff list for " + char.GetName() + ": " + buffString, true );
+		
+		
+		buffString = " ";
+		for ( var j in char.m_InvisibleBuffList ) {
+			buffString += LDBFormat.LDBGetText( 50210, Number(j) ) + " (" + j + "), ";
+		}
+		Debugger.DebugText("pDC.DEBUG_PrintDebuffsOnPlayer(): invisible debuff list for " + char.GetName() + ": " + buffString, true );
+	}
+	
+	public function DEBUG_PrintDebuffsOnTeam() {
+		var team:Team = TeamInterface.GetClientTeamInfo();
+		for (var i in team.m_TeamMembers)
+		{
+			var teamMember = team.m_TeamMembers[i];
+			var char:Character = Character.GetCharacter( teamMember["m_CharacterId"] );
+			DEBUG_PrintDebuffsOnPlayer( char );
+		}
+	}
+	
+	public function DEBUG_PrintDebuffsOnRaid() {		
+		var raid:Raid = TeamInterface.GetClientRaidInfo();
+		var team:Team = TeamInterface.GetClientTeamInfo();
+		// check to see if we're in a raid
+		if ( raid ) {
+			
+			// if so, check each team in the raid
+			for ( var key:String in raid.m_Teams ) {
+				
+				DEBUG_PrintDebuffsOnTeam( raid.m_Teams[key] );				
+			}
+		}
+		// otherwise, just check our current team (only needed if 5 or fewer in instance, so likely only SM/E1)
+		else if ( team ) {				
+			DEBUG_PrintDebuffsOnTeam( team );
+		}
+		// otherwise you're alone. Pretty sure you're getting podded, but just for completeness we'll check anyway
+		else {
+			DEBUG_PrintDebuffsOnPlayer(Character.GetClientCharacter());
+		}
 	}
 	
 }

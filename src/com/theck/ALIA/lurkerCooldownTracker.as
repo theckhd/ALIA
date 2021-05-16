@@ -47,7 +47,7 @@ class com.theck.ALIA.lurkerCooldownTracker
 	static var SHADOW_COOLDOWN_E10:Number = 90000; // 
 	
 	static var SHADOW_COOLDOWN_E17_FIRST:Number = 70000; // 70s
-	static var SHADOW_COOLDOWN_E17:Number = 75000; // 75s (2021-01-06) 
+	static var SHADOW_COOLDOWN_E17:Number = 75000; // 75s (2021-01-06) (recording from 5/12/2021 seems to show 82s+?)
 	
 	static var SHADOW_FROM_BENEATH_LOCKOUT:Number = 22000; // Pod seems to lock out Shadow for 22 seconds or so
 	
@@ -114,9 +114,10 @@ class com.theck.ALIA.lurkerCooldownTracker
 				shadowCooldownRemaining = undefined;
 				
 				// show display and start updating
-				barDisplay.SetVisible(true);
+				barDisplay.SetVisible(true, encounterPhase);
 				UpdateBars();
 				StartTrackingCooldowns();
+				barDisplay.shadowBar.SetVisible(false);
 			}
 			else if ( encounterPhase == 2 ) {
 				Debugger.DebugText("UpdateEncounterPhase() - Phase 2 block", debugMode);
@@ -126,7 +127,7 @@ class com.theck.ALIA.lurkerCooldownTracker
 				
 				// clear last update time and show display
 				lastUpdateTime = undefined;				
-				barDisplay.SetVisible(false);
+				barDisplay.SetVisible(false, encounterPhase);
 			}
 			else if ( encounterPhase == 3 ) {
 				Debugger.DebugText("UpdateEncounterPhase() - Phase 3 block", debugMode);
@@ -141,7 +142,7 @@ class com.theck.ALIA.lurkerCooldownTracker
 				
 				// clear last update time
 				lastUpdateTime = undefined;
-				barDisplay.SetVisible(true);
+				barDisplay.SetVisible(true, encounterPhase);
 				
 				// don't start tracking cooldowns - let ALIA dictate that based on lurker health changing - but do update the bar display once
 				UpdateBars();
@@ -150,7 +151,7 @@ class com.theck.ALIA.lurkerCooldownTracker
 				Debugger.DebugText("UpdateEncounterPhase() - Phase 4 block", debugMode);
 				// hide display and stop updating
 				StopTrackingCooldowns();
-				barDisplay.SetVisible(false);
+				barDisplay.SetVisible(false, encounterPhase);
 			}
 		}
 	}
@@ -183,7 +184,7 @@ class com.theck.ALIA.lurkerCooldownTracker
 	{		
 		barDisplay.UpdateFromBeneathBar( fromBeneathCooldownRemaining );
 		barDisplay.UpdatePureFilthBar( pureFilthCooldownRemaining );
-		barDisplay.UpdateShadowBar( shadowCooldownRemaining );
+		if encounterPhase == 3 { barDisplay.UpdateShadowBar( shadowCooldownRemaining ) };
 	}
 	
 	private function ReduceCooldownRemaining(cdr:Number, amount:Number) 

@@ -188,6 +188,13 @@ class gui.theck.npcStatusDisplay
 		UpdateStatusText(roseStatusText, roseStatus);
 		UpdateStatusText(alexStatusText, alexStatus);
 		UpdateStatusText(zuberiStatusText, zuberiStatus);	
+		
+		//// debugging
+		//var currentTime:Date = new Date();
+		//if (meiStatus == 3 ) { Debugger.PrintText("nSD.UpdateAll: Mei " + " " + currentTime.getSeconds() + "s or " + currentTime.getMilliseconds() + "ms"); };
+		//if (roseStatus == 3 ) { Debugger.PrintText("nSD.UpdateAll: Rose " + " " + currentTime.getSeconds() + "s or " + currentTime.getMilliseconds() + "ms"); };
+		//if (alexStatus == 3 ) { Debugger.PrintText("nSD.UpdateAll: Alex " + " " + currentTime.getSeconds() + "s or " + currentTime.getMilliseconds() + "ms"); };
+		//if (zuberiStatus == 3 ) { Debugger.PrintText("nSD.UpdateAll: Zuberi " + " " + currentTime.getSeconds() + "s or " + currentTime.getMilliseconds() + "ms"); };
     }
 	
 	private function UpdateLetter(field:TextField, status:Number) {

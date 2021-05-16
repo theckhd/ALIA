@@ -96,20 +96,34 @@ class gui.theck.lurkerBarDsiplay
 	}
 		
 	public function SetVisible(flag:Boolean, phase:Number) {
-		Debugger.DebugText("LBD.SetVisible()", debugMode);
+		Debugger.DebugText("LBD.SetVisible(): flag=" + flag + ", phase=" + phase, debugMode);
 		if ( phase == 4 ) {
 			clip._visible = false;
 		}
 		else {
 			clip._visible = flag;
 		}
+		
+		if ( shadowBarEnabled && phase && ( phase == 3 ) ) {
+			shadowBar.SetVisible(flag);
+			Debugger.DebugText("shadowBar set to flag", debugMode);
+		}
+		else {
+			shadowBar.SetVisible(false);
+			Debugger.DebugText("shadowBar set to false", debugMode);
+		}
 	}
+
 	
 	//private function SetFakeStatusText() {
 		//fromBeneathBar.Update(10, "Drag", "Me");
 		//pureFilthBar.Update(20);
 		//shadowBar.Update(30);
 	//}
+	
+	public function EnableShadowBar(flag:Boolean) {
+		shadowBarEnabled = flag;
+	}
 	
 	public function UpdateFromBeneathBar(time:Number) {
 
@@ -127,7 +141,7 @@ class gui.theck.lurkerBarDsiplay
 	}
 	
 	public function FormatTimeString(time:Number):String {
-		Debugger.DebugText("LBD.FormatTimeString() time is " + time, debugMode);
+		//Debugger.DebugText("LBD.FormatTimeString() time is " + time, debugMode);
 		var timeStr:String;
 		var timeInSec:Number = Math.round(time / 100) / 10;
 		//var fullSeconds:Number = Math.floor(timeInSec);
