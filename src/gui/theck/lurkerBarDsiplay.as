@@ -40,17 +40,12 @@ class gui.theck.lurkerBarDsiplay
 		
 		fromBeneathBar.SetRightText("Pod");
 		pureFilthBar.SetRightText("Pure Filth");
+				
+		shadowBar = new SimpleBar("shadow", clip, 0, fromBeneathBar.barHeight + pureFilthBar.barHeight, barWidths, barFontSize);
+		shadowBar.SetRightText("Shadow");
 		
-		//fromBeneathBar.EnableInteraction(false);
-		//pureFilthBar.EnableInteraction(false);
-		//shadowBar.EnableInteraction(false);
-		
-		// disable shadow bar for now since it's useless
-		if shadowBarEnabled {
-			shadowBar = new SimpleBar("shadow", clip, 0, fromBeneathBar.barHeight + pureFilthBar.barHeight, barWidths, barFontSize);
-			shadowBar.SetRightText("Shadow");
-		}
-		//shadowBar.SetVisible(false);
+		// hide shadow bar for now - will reappear if user sets option later in SetVisible()
+		shadowBar.SetVisible(false);
 	}
 	
 	
@@ -104,25 +99,19 @@ class gui.theck.lurkerBarDsiplay
 			clip._visible = flag;
 		}
 		
+		// If the user has enabled the shadow bar and we're in phase 3, show it; otherwise hide
 		if ( shadowBarEnabled && phase && ( phase == 3 ) ) {
 			shadowBar.SetVisible(flag);
-			Debugger.DebugText("shadowBar set to flag", debugMode);
 		}
 		else {
 			shadowBar.SetVisible(false);
-			Debugger.DebugText("shadowBar set to false", debugMode);
-		}
+		}		
 	}
 
-	
-	//private function SetFakeStatusText() {
-		//fromBeneathBar.Update(10, "Drag", "Me");
-		//pureFilthBar.Update(20);
-		//shadowBar.Update(30);
-	//}
-	
+		
 	public function EnableShadowBar(flag:Boolean) {
 		shadowBarEnabled = flag;
+		Debugger.DebugText("LBD.SetVisible(): shadowBarEnabled is " + shadowBarEnabled, debugMode);
 	}
 	
 	public function UpdateFromBeneathBar(time:Number) {
@@ -141,11 +130,9 @@ class gui.theck.lurkerBarDsiplay
 	}
 	
 	public function FormatTimeString(time:Number):String {
-		//Debugger.DebugText("LBD.FormatTimeString() time is " + time, debugMode);
+		
 		var timeStr:String;
 		var timeInSec:Number = Math.round(time / 100) / 10;
-		//var fullSeconds:Number = Math.floor(timeInSec);
-		//var tenths:Number = 10*(timeInSec-fullSeconds);
 		var fullSeconds:Number = Math.round(timeInSec);
 		
 		if ( time == undefined ) {
@@ -155,7 +142,6 @@ class gui.theck.lurkerBarDsiplay
 			timeStr = "Ready";
 		}
 		else {
-			//timeStr = fullSeconds.toString() + "." + tenths.toString();
 			timeStr = fullSeconds.toString();
 		}
 		return timeStr;

@@ -34,7 +34,7 @@ class com.theck.ALIA.lurkerCooldownTracker
 	static var PURE_FILTH_FROM_BENEATH_LOCKOUT:Number = 9500; // Pod locks out Pure Filth by 9-10s as well, observed in multiple difficulties
 	
 	// Shadow Out Of Time timings 
-	static var SHADOW_COOLDOWN_SM_FIRST:Number = 54000; // (2021-01-08)
+	static var SHADOW_COOLDOWN_SM_FIRST:Number = 45000; // (2021-05-21 recording)
 	static var SHADOW_COOLDOWN_SM:Number = 41000; // (2021-01-08)
 	
 	static var SHADOW_COOLDOWN_E1_FIRST:Number = 38000 // ???
@@ -117,7 +117,6 @@ class com.theck.ALIA.lurkerCooldownTracker
 				barDisplay.SetVisible(true, encounterPhase);
 				UpdateBars();
 				StartTrackingCooldowns();
-				barDisplay.shadowBar.SetVisible(false);
 			}
 			else if ( encounterPhase == 2 ) {
 				Debugger.DebugText("UpdateEncounterPhase() - Phase 2 block", debugMode);

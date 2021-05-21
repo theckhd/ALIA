@@ -5,7 +5,7 @@
 import com.Utils.Archive;
 //import com.theck.ALIA.ALIA
  
-class Main 
+class com.theck.ALIA.Main
 
 {
 	private static var s_app:com.theck.ALIA.ALIA;

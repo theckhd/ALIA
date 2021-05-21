@@ -56,12 +56,6 @@ class gui.theck.SimpleBar
 		var height:Number = extents.height + extents.height * 0.05 + 4;
 		barHeight = Math.ceil(height);
 		
-		//Debugger.DebugText("SimpleBar: height = " + height, debugMode);
-		//Debugger.DebugText("SimpleBar: m_bar parent is " + m_bar._parent, debugMode);
-		//Debugger.DebugText("SimpleBar: m_frame parent is " + m_frame._parent, debugMode);
-		//Debugger.DebugText("SimpleBar: m_scaleFrame parent is " + m_scaleFrame._parent, debugMode);
-		
-		//m_bar = CreateBar( name + "Bar", width, height, colors); // deprecated?
 		CreateBar2(m_bar, width, height, colors);
 		
 		m_leftText = m_frame.createTextField(name + "_leftText", m_frame.getNextHighestDepth(), -50, m_frame._height / 2 - extents.height / 2, leftTextWidth, extents.height);
@@ -71,9 +65,6 @@ class gui.theck.SimpleBar
 		m_rightText.setNewTextFormat(textFormat);		
 		m_leftText.background = false;
 		m_rightText.background = false;
-		
-		//Debugger.DebugText("SimpleBar: m_leftText parent is " + m_leftText._parent, debugMode);
-		//Debugger.DebugText("SimpleBar: m_rightText parent is " + m_rightText._parent, debugMode);
 		
 		// SUPER HACKY - for some reason MovieClips don't seem to register clicks in GUIEdit mode, but TextFields do. So we make one big TextField over the whole bar for GUIEdit purposes.
 		m_dragText = m_frame.createTextField(name + "_dragText", m_frame.getNextHighestDepth(), 0, 0, width, m_frame._height );		
@@ -92,7 +83,10 @@ class gui.theck.SimpleBar
 	}
 	
 	
-	public function SetVisible(visible:Boolean):Void { m_frame._visible = visible; }
+	public function SetVisible(flag:Boolean):Void { 
+		m_frame._visible = flag; 
+		m_bar._visible = flag;		
+	}
 	
 	public function GetVisible():Boolean { return m_frame._visible;	}
 	
@@ -104,28 +98,7 @@ class gui.theck.SimpleBar
 		pt.y = m_frame._y;
 		return pt;
 	}
-	
-	
-/*	private function onDragPress():Void
-	{
-		m_frame.startDrag();
-		m_dragging = true;
-	}
-	
-	private function onDragRelease():Void
-	{
-		if (m_dragging == true)
-		{
-			m_frame.stopDrag();
-			m_dragging = false;
-		}
-	}*/
-
-	//public function EnableInteraction(state:Boolean) {
-		////m_frame.hitTestDisable = !state;
-		//m_scaleFrame.hitTestDisable = !state;
-	//}
-	
+		
 	public function Unload():Void
 	{
 		m_frame.removeMovieClip();
@@ -148,8 +121,7 @@ class gui.theck.SimpleBar
 		}		
 		else {
 			SetVisible(true);
-			//Debugger.DebugText("SimpleBar: leftString is " + leftString, debugMode);
-			//Debugger.DebugText("SimpleBar: rightString is " + rightString, debugMode);
+			
 			// update strings if provided
 			if ( leftString != null ) {
 				m_leftText.text = leftString;
@@ -161,9 +133,6 @@ class gui.theck.SimpleBar
 			if ( pct > 1 ) { pct = 1 };
 			
 			// update percentage bar
-			//Debugger.DebugText("SimpleBar: pct is " + pct, debugMode);
-			//Debugger.DebugText("SimpleBar: m_scaleFrame._width is " + m_scaleFrame._width, debugMode);
-			//Debugger.DebugText("SimpleBar: m_scaleWidth is " + m_scaleWidth, debugMode);
 			m_scaleFrame._width = ( m_scaleWidth * pct );
 		}
 	}

@@ -35,7 +35,7 @@ import flash.geom.Point;
 class com.theck.ALIA.ALIA 
 {
 	// Version
-	static var version:String = "1.0.8.1";
+	static var version:String = "1.0.9";
 	
 	// toggle debug messages and enable addon outisde of NYR
 	static var debugMode:Boolean = false;
@@ -370,6 +370,9 @@ class com.theck.ALIA.ALIA
 		fromBeneathSound.SetValue( config.FindEntry("alia_fromBeneathSound", true));
 		showNPCNames.SetValue( config.FindEntry("alia_showNPCNames", true));
 		showShadowBar.SetValue( config.FindEntry("alia_shadowbar", false) );
+		
+		// any options that need to be passed to other classes need to be handled here
+		barDisplay.EnableShadowBar( showShadowBar.GetValue() );
 		
 		// new options get added above this line
 		debuggingHack.SetValue( false );
