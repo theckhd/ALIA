@@ -23,7 +23,7 @@ Shows the Lurker's current health percentage. Remains active even when the Lurke
 ![Warning Display](screens/alia_warning_display.png)
 
 Displays warnings for the following casts:
-- Shadow from Beyond (first one only, at 75%)
+- Shadow out of Time (first one only, at 75%)
 - Personal Space (67%, 45%, 25%)
 - Final Resort (2.5% on Story Mode, 5% on all elite difficulties)
 Also displays a "coming soon" warning before the cast threshold (3% ahead by default, user-configurable). These warnings fade out quickly when the spell is cast.
