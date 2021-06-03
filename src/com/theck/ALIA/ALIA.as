@@ -1297,21 +1297,21 @@ class com.theck.ALIA.ALIA
 	
 	private function UpdateWarning(text:String)	{
 		// print text to chat, stop any existing blink effects, and update the text field
-		com.GameInterface.UtilsBase.PrintChatText(text);
+		//com.GameInterface.UtilsBase.PrintChatText(text);
 		warningController.StopBlink();
 		warningController.UpdateText(text);
 	}
 	
 	private function UpdateWarningWithDecay(text:String) {
 		// print text to chat, update the text field, schedule decay
-		com.GameInterface.UtilsBase.PrintChatText(text);
+		//com.GameInterface.UtilsBase.PrintChatText(text);
 		warningController.UpdateText(text);		
 		warningController.DecayText(textDecayTime);
 	}
 	
 	private function UpdateWarningWithBlink(text:String) {
 		// print text to chat, set color to red, update the text field, start blinking
-		com.GameInterface.UtilsBase.PrintChatText(text);
+		//com.GameInterface.UtilsBase.PrintChatText(text);
 		warningController.SetTextColor( nowColor );
 		warningController.UpdateText(text);
 		warningController.BlinkText();
