@@ -179,7 +179,7 @@ class com.theck.ALIA.ALIA
 		GlobalSignal.SignalSetGUIEditMode.Connect(GuiEdit, this);
 		
 		// connect options to SettingsChanged function
-		ConnetOptionsSignals();
+		ConnectOptionsSignals();
 		
 		// announce settings flag
 		announceSettingsBool = true;
@@ -192,7 +192,7 @@ class com.theck.ALIA.ALIA
 		// disconnect all signals
 		ResetLurker();
 		
-		DisconnetOptionsSignals();
+		DisconnectOptionsSignals();
 	}
 	
 	public function Activate(config:Archive) {
@@ -311,7 +311,7 @@ class com.theck.ALIA.ALIA
 		debuggingHack = DistributedValue.Create("alia_debug");
 	}
 	
-	private function ConnetOptionsSignals() {
+	private function ConnectOptionsSignals() {
 		
 		// connect option change signals to SettingsChanged
 		pct_warning.SignalChanged.Connect(SettingsChanged, this);
@@ -326,7 +326,7 @@ class com.theck.ALIA.ALIA
 		debuggingHack.SignalChanged.Connect(DebuggingHack, this);
 	}
 	
-	private function DisconnetOptionsSignals() {
+	private function DisconnectOptionsSignals() {
 		
 		// disconnect option change signals 	
 		pct_warning.SignalChanged.Disconnect(SettingsChanged, this);
