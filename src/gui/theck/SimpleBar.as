@@ -8,6 +8,7 @@
  
 import com.theck.Utils.Debugger;
 import flash.geom.Matrix;
+import flash.geom.Point;
 //import caurina.transitions.Tweener;
 import com.Utils.Text;
 
@@ -15,12 +16,13 @@ class gui.theck.SimpleBar
 {
 	private var debugMode:Boolean = false;
 	
-	private var m_frame:MovieClip;
+	public var m_frame:MovieClip;
 	private var m_bar:MovieClip;
 	private var m_scaleFrame:MovieClip;
 	private var m_scaleWidth:Number;
 	private var m_leftText:TextField;
 	private var m_rightText:TextField;	
+	private var m_centerText:TextField;	
 	private var m_dragText:TextField;
 	private var m_parent:MovieClip;
 	public var barHeight:Number;
@@ -60,16 +62,21 @@ class gui.theck.SimpleBar
 		
 		m_leftText = m_frame.createTextField(name + "_leftText", m_frame.getNextHighestDepth(), -50, m_frame._height / 2 - extents.height / 2, leftTextWidth, extents.height);
 		m_rightText = m_frame.createTextField(name + "_rightText", m_frame.getNextHighestDepth(), m_bar._width - rightTextWidth, m_frame._height / 2 - extents.height / 2, rightTextWidth, extents.height);
+		m_centerText = m_frame.createTextField(name + "_centerText", m_frame.getNextHighestDepth(), 0, m_frame._height / 2 - extents.height / 2, m_bar._width, extents.height);
 		
 		m_leftText.setNewTextFormat(textFormat);		
-		m_rightText.setNewTextFormat(textFormat);		
+		m_rightText.setNewTextFormat(textFormat);	
+		
+		textFormat.align = "center";
+		m_centerText.setNewTextFormat(textFormat);	
+		
 		m_leftText.background = false;
 		m_rightText.background = false;
+		m_centerText.background = false;
 		
 		// SUPER HACKY - for some reason MovieClips don't seem to register clicks in GUIEdit mode, but TextFields do. So we make one big TextField over the whole bar for GUIEdit purposes.
 		m_dragText = m_frame.createTextField(name + "_dragText", m_frame.getNextHighestDepth(), 0, 0, width, m_frame._height );		
-
-		textFormat.align = "center";
+		
 		m_dragText.setNewTextFormat(textFormat);
 		m_dragText.text = "Drag Me";
 		m_dragText._visible = false;
@@ -109,6 +116,7 @@ class gui.theck.SimpleBar
 		m_dragText._visible = state;
 		m_leftText._visible = !state;
 		m_rightText._visible = !state;
+		m_centerText._visible = !state;
 	}
 	
 	public function Update(pct:Number, leftString:String, rightString:String):Void
@@ -142,6 +150,23 @@ class gui.theck.SimpleBar
 		if ( rightString != null ) {
 			m_rightText.text = rightString;
 		}
+	}
+	
+	public function SetCenterText(centerString:String):Void 
+	{
+		if ( centerString != null ) {
+			m_centerText.text = centerString;
+		}
+	}
+	
+	public function SetPos(pos:Point) {
+		// sanitize inputs - this fixes a bug where someone changes screen resolution and suddenly the field is off the visible screen
+		if ( pos.x > Stage.width || pos.x < 0 ) { pos.x = Stage.width / 2; }
+		if ( pos.y > Stage.height || pos.y < 0 ) { pos.y = Stage.height / 2; }
+		
+		// set position
+		m_frame._x = pos.x;
+		m_frame._y = pos.y;
 	}
 	
 	// Functions shamelessly stolen from BooBars and adapted for my nefarious purposes

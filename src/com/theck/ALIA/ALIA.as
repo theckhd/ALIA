@@ -11,6 +11,7 @@
 import com.GameInterface.DistributedValue;
 import com.GameInterface.Game.Character;
 import com.GameInterface.Game.Dynel;
+import gui.theck.SimpleBar;
 //import com.GameInterface.Utils;
 import com.GameInterface.VicinitySystem;
 import com.Utils.ID32;
@@ -35,7 +36,7 @@ import flash.geom.Point;
 class com.theck.ALIA.ALIA 
 {
 	// Version
-	static var version:String = "1.0.10";
+	static var version:String = "1.1.0";
 	
 	// toggle debug messages and enable addon outisde of NYR
 	static var debugMode:Boolean = false;
@@ -67,7 +68,10 @@ class com.theck.ALIA.ALIA
 	// lockout timers
 	static var LOCKOUT_PURE_FILTH:Number = 4000; // cast time of Pure Filth + 1 s wiggle room
 	static var LOCKOUT_SHADOW:Number = 10000; // cast time + 2 s wiggle room
+	static var LOCKOUT_PERSONAL:Number = 7000; // cast time + 2 s wiggle room
 	static var LOCKOUT_FROM_BENEATH:Number = 4000; // cast time of From Beneath + 1s wiggle room
+	
+	static var LURKERCASTBAR_INTERVAL = 50;
 	
 	// These aren't needed right now, just here for reference. Values from live (post-patch)
 	//static var lurkerMaxHealthSM = 3262582;
@@ -100,11 +104,16 @@ class com.theck.ALIA.ALIA
 	private var p_pos:flash.geom.Point;
 	private var b_pos:flash.geom.Point;
 	private var t_pos:flash.geom.Point;
+	private var cb_pos:flash.geom.Point;
 	private var warningController:TextFieldController;
 	private var healthController:TextFieldController;
 	private var updateHealthDisplay:Boolean;
 	private var npcDisplay:npcStatusDisplay;
 	private var playerDebuffController:playerDebuffChecker;
+	private var lurkerCastBar:SimpleBar;
+	private var lurkerCastName:String;
+	private var lurkerCastBarUpdateInterval:Number;
+	private var lurkerCastInProgress:Boolean;
 	private var guiEditThrottle:Boolean = true;
 	private var podDisplay:podTargetsDisplay;
 	private var barDisplay:lurkerBarDsiplay;
@@ -133,6 +142,7 @@ class com.theck.ALIA.ALIA
 	private var numShadows:Number;
 	private var numDownfalls:Number;
 	private var shadowThrottleFlag:Boolean = true;
+	private var personalThrottleFlag:Boolean = true;
 	private var fromBeneathThrottleFlag:Boolean = true;
 	private var pureFilthThrottleFlag:Boolean = true;
 	private var downfallThrottleFlag:Boolean = true;
@@ -149,11 +159,14 @@ class com.theck.ALIA.ALIA
 	
 	// other options
 	private var showZuberi:DistributedValue;
+	private var ignorePoddedNPCs:DistributedValue;
 	private var personalSound:DistributedValue;
 	private var fromBeneathSound:DistributedValue;
 	private var showSlashCommands:DistributedValue;
 	private var showNPCNames:DistributedValue;
 	private var showShadowBar:DistributedValue;
+	private var showCastBar:DistributedValue;
+	private var playHulkWarningSound:DistributedValue;
 	private var debuggingHack:DistributedValue;
 
 	//////////////////////////////
@@ -305,6 +318,8 @@ class com.theck.ALIA.ALIA
 		fromBeneathSound = DistributedValue.Create("alia_pod_sound");
 		showNPCNames = DistributedValue.Create("alia_shownames");
 		showShadowBar = DistributedValue.Create("alia_shadowbar");
+		showCastBar = DistributedValue.Create("alia_castbar");
+		playHulkWarningSound = DistributedValue.Create("alia_hulk_sound");
 		
 		// new options get added above this line
 		showSlashCommands = DistributedValue.Create("alia_options");
@@ -320,6 +335,8 @@ class com.theck.ALIA.ALIA
 		fromBeneathSound.SignalChanged.Connect(SettingsChanged, this);
 		showNPCNames.SignalChanged.Connect(SettingsChanged, this);
 		showShadowBar.SignalChanged.Connect(SettingsChanged, this);
+		showCastBar.SignalChanged.Connect(SettingsChanged, this);
+		playHulkWarningSound.SignalChanged.Connect(SettingsChanged, this);
 		
 		// new options get added above this line
 		showSlashCommands.SignalChanged.Connect(AnnounceSlashCommands, this);
@@ -335,6 +352,8 @@ class com.theck.ALIA.ALIA
 		fromBeneathSound.SignalChanged.Disconnect(SettingsChanged, this);
 		showNPCNames.SignalChanged.Disconnect(SettingsChanged, this);
 		showShadowBar.SignalChanged.Disconnect(SettingsChanged, this);
+		showCastBar.SignalChanged.Disconnect(SettingsChanged, this);
+		playHulkWarningSound.SignalChanged.Disconnect(SettingsChanged, this);
 		
 		// new options get added above this line
 		showSlashCommands.SignalChanged.Disconnect(AnnounceSlashCommands, this);
@@ -362,6 +381,9 @@ class com.theck.ALIA.ALIA
 		t_pos = config.FindEntry("alia_timerPosition", new Point(700, 600));
 		countdownTimer.SetPos(t_pos);
 		
+		cb_pos = config.FindEntry("alia_castBarPosition", new Point(500, 500));
+		lurkerCastBar.SetPos(cb_pos);
+		
 		// set options
 		// the arguments here are the names of the settings within Config (not the slash command strings)
 		pct_warning.SetValue(config.FindEntry("alia_pct_warning", 3));
@@ -370,6 +392,8 @@ class com.theck.ALIA.ALIA
 		fromBeneathSound.SetValue( config.FindEntry("alia_fromBeneathSound", true));
 		showNPCNames.SetValue( config.FindEntry("alia_showNPCNames", true));
 		showShadowBar.SetValue( config.FindEntry("alia_shadowbar", false) );
+		showCastBar.SetValue( config.FindEntry("alia_castbar", true) );
+		playHulkWarningSound.SetValue( config.FindEntry("alia_hulk_sound", false) );
 		
 		// any options that need to be passed to other classes need to be handled here
 		barDisplay.EnableShadowBar( showShadowBar.GetValue() );
@@ -389,6 +413,7 @@ class com.theck.ALIA.ALIA
 		config.AddEntry("alia_podPosition", p_pos);
 		config.AddEntry("alia_barPosition", b_pos);
 		config.AddEntry("alia_timerPosition", t_pos);
+		config.AddEntry("alia_castBarPosition", cb_pos);
 		
 		// save options
 		// the arguments here are the names of the settings within Config (not the slash command strings)
@@ -396,8 +421,10 @@ class com.theck.ALIA.ALIA
 		config.AddEntry("alia_showZuberi", showZuberi.GetValue());
 		config.AddEntry("alia_personalSound", personalSound.GetValue());
 		config.AddEntry("alia_fromBeneathSound", fromBeneathSound.GetValue());
+		config.AddEntry("alia_hulk_sound", playHulkWarningSound.GetValue());
 		config.AddEntry("alia_showNPCNames", showNPCNames.GetValue());
 		config.AddEntry("alia_shadowbar", showShadowBar.GetValue());
+		config.AddEntry("alia_castbar", showCastBar.GetValue());
 		
 		return config
 	}
@@ -437,6 +464,15 @@ class com.theck.ALIA.ALIA
 			barDisplay.EnableShadowBar( showShadowBar.GetValue() );
 			GuiEdit();
 			break;
+		case "alia_castbar":
+			showCastBar = dv;
+			lurkerCastBar.SetVisible( showCastBar.GetValue() );
+			GuiEdit();
+			break;
+		case "alia_hulk_sound":
+			playHulkWarningSound = dv;			
+			if ( loadFinished && fromBeneathSound.GetValue() ) { PlayHulkWarningSound(); };
+			break;
 		}
 		
 		AnnounceSettings(loadFinished);
@@ -444,7 +480,7 @@ class com.theck.ALIA.ALIA
 	
 	public function AnnounceSettings(override:Boolean) {
 		if ( debugMode || override || ( announceSettingsBool && IsNYR() ) )  {
-			com.GameInterface.UtilsBase.PrintChatText("ALIA v" + version + ":" + ( IsNYR() ? " NYR Detected." : "" ) + " Warning setting is " + pct_warning.GetValue() + '%, Zuberi is ' + ( showZuberi.GetValue() ? "shown" : "hidden" ) + ". Sound alert for Personal Space " + ( personalSound.GetValue() ? "enabled" : "disabled" ) + ". Sound alert for Pod cast " + ( fromBeneathSound.GetValue() ? "enabled" : "disabled" ) + ". NPC names are " + ( showNPCNames.GetValue() ? "shown" : "abbreviated" ) + ". Experimental Shadow bar is " + ( showShadowBar.GetValue() ? "enabled" : "disabled" ) + "." );
+			com.GameInterface.UtilsBase.PrintChatText("ALIA v" + version + ":" + ( IsNYR() ? " NYR Detected." : "" ) + " Warning setting is " + pct_warning.GetValue() + '%, Zuberi is ' + ( showZuberi.GetValue() ? "shown" : "hidden" ) + ". Sound alert for Personal Space " + ( personalSound.GetValue() ? "enabled" : "disabled" ) + ". Sound alert for Pod cast " + ( fromBeneathSound.GetValue() ? "enabled" : "disabled" ) + ". Sound alert for Hulks (phase 3) is " + ( playHulkWarningSound.GetValue() ? "enabled" : "disabled" ) + ". NPC names are " + ( showNPCNames.GetValue() ? "shown" : "abbreviated" ) + ". Lurker cast bar is " + ( showCastBar.GetValue() ? "enabled" : "disabled" ) + ". Experimental Shadow bar is " + ( showShadowBar.GetValue() ? "enabled" : "disabled" ) + "." );
 			com.GameInterface.UtilsBase.PrintChatText("ALIA: Type \"/option alia_options true\" to see slash commands.");
 			announceSettingsBool = false; // only resets on Load() or SettingsChanged()
 		}
@@ -458,6 +494,8 @@ class com.theck.ALIA.ALIA
 			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_shownames (true/false)\" will toggle full NPC names.");
 			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_ps_sound (true/false)\" will enable Personal Space warning sound.");
 			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_pod_sound (true/false)\" will enable From Beneath You It Devours warning sound.");
+			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_hulk_sound (true/false)\" will enable warning sounds for hulks in phase 3.");
+			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_castbar (true/false)\" will enable the lurker cast bar.");
 			com.GameInterface.UtilsBase.PrintChatText("ALIA: \"/setoption alia_shadowbar (true/false)\" will enable an experimental Shadow from Beyond timer bar.");
 			
 		}
@@ -469,6 +507,8 @@ class com.theck.ALIA.ALIA
 		SummonDrone();
 		if ( debugMode && debuggingHack.GetValue() ){ 
 			
+			
+			PlayHulkWarningSound();
 			//PlayPersonalSpaceSoonWarningSound();
 			
 			
@@ -566,6 +606,7 @@ class com.theck.ALIA.ALIA
 			elevel = 17;
 		}
 		DebugText("GetLurkerEliteLevel(): Lurker found to be elevel = " + elevel + " (dynel112: " + lurker112 + ", max health: " + lurkerMaxHealth + ")");
+		Debugger.PrintText("GetLurkerEliteLevel(): Lurker found to be elevel = " + elevel + " (dynel112: " + lurker112 + ", max health: " + lurkerMaxHealth + ")");
 		return elevel;
 	}
 	
@@ -664,7 +705,7 @@ class com.theck.ALIA.ALIA
 			DebugText("DetectNPCs(): Zuberi hooked");	
 		}
 		
-		// Hulks only show up in phase 2, use them for encounter state detection
+		// Hulks only show up in phase 2 & 3, use them for encounter state detection
 		if ( dynel112 == hulk112_E5 || dynel112 == hulk112_E10 || dynel112 == hulk112_E17 ) {
 			DebugText("DetectNPCs(): Detected " + dynel.GetName() + " #" + ( numHulks + 1 ) + ", id: " + dynel112 );	
 			
@@ -673,7 +714,13 @@ class com.theck.ALIA.ALIA
 			currentHulk.SignalCharacterDied.Connect(HulkDied, this);
 			
 			// encounter state logic - detecting a hulk means at least phase 2
-			AdvanceEncounterState(2, "detecting a Hulk");		
+			AdvanceEncounterState(2, "detecting a Hulk");
+			
+			if ( numHulks > 4 || encounterPhase > 2 ) && playHulkWarningSound.GetValue() {
+				
+				// play sound for MBio
+				PlayHulkWarningSound();
+			}
 		}
 		
 		// Birds only show up in phase 2, use them for encounter state detection. Each difficulty has a different id, because why the hell not.
@@ -854,6 +901,10 @@ class com.theck.ALIA.ALIA
 		DebugText("Lurker is casting " + spell);
 		
 		// Several of these calls need to be throttled because reticle-targetting can cause this signal to be triggered multiple times in one cast
+		if showCastBar.GetValue() {
+			lurkerCastName = spell;
+			StartLurkerCastBar(); //todo throttle?
+		}
 		
 		// Shadow out of Time
 		if ( ( spell == stringShadowOutOfTime ) && shadowThrottleFlag )
@@ -878,22 +929,28 @@ class com.theck.ALIA.ALIA
 		}
 		
 		// Personal Space
-		else if (spell == stringPersonalSpace)
+		else if (spell == stringPersonalSpace && personalThrottleFlag)
 		{
-			if ( GetHealthPercent(lurker) < 0.68 ) {
+			//if ( GetHealthPercent(lurker) < 0.68 ) {
 				
 				// decay warning text when PS is cast
 				warningController.DecayText(3);	
-			}
+			//}
+			
+			// reset throttle flag after 7 seconds (cast is only 5 seconds)
+			setTimeout(Delegate.create(this, ResetPersonalThrottleFlag), LOCKOUT_PERSONAL);
 		}
 		
 		// Final Resort
-		else if (spell == stringFinalResort)
+		else if (spell == stringFinalResort && personalThrottleFlag)
 		{
 			// decay warning text and stop blinking effect when FR cast
 			warningController.DecayText(3);
 			warningController.StopBlink();
 			warningController.SetTextColor(nowColor);
+			
+			// reset throttle flag after 7 seconds (cast is only 5 seconds)
+			setTimeout(Delegate.create(this, ResetPersonalThrottleFlag), LOCKOUT_PERSONAL);
 		}
 		
 		// From Beneath You It Devours (pod)
@@ -951,7 +1008,36 @@ class com.theck.ALIA.ALIA
 		}
 	}
 
+	private function StartLurkerCastBar() {
+		DebugText("SLCB entered")
+		lurkerCastBar.SetVisible(true);
+		//lurkerCastBar.Update(lurker.GetCommandProgress(), "", lurkerCastName);
+		DebugText("interval: " + lurkerCastBarUpdateInterval);
+		if (!lurkerCastBarUpdateInterval ) {
+			lurkerCastBarUpdateInterval = setInterval(Delegate.create(this, UpdateLurkerCastBar), LURKERCASTBAR_INTERVAL);
+		}
+	}
+	
+	private function UpdateLurkerCastBar() {
+		lurkerCastBar.Update(lurker.GetCommandProgress(), "", "");
+		lurkerCastBar.SetCenterText(lurkerCastName);
+		
+		//DebugText("ULC: bool: " + lurkerCastInProgress + "; progress: " + lurker.GetCommandProgress());
+		
+		if ( lurker.GetCommandProgress() > 0.2 && ! lurkerCastInProgress ) { lurkerCastInProgress = true };
+		
+		if ( lurker.GetCommandProgress() == 0 ||lurker.GetCommandProgress() == 1 || ! lurker.GetCommandProgress() ) && lurkerCastInProgress {
+			lurkerCastBar.SetVisible(false);
+			lurkerCastInProgress = false;
+			DebugText("ULC.end bool: " + lurkerCastInProgress + "; progress: " + lurker.GetCommandProgress());
+			clearInterval(lurkerCastBarUpdateInterval);
+			lurkerCastBarUpdateInterval = undefined;
+		}
+	}
+	
 	private function ResetShadowThrottleFlag() { shadowThrottleFlag = true; }
+	
+	private function ResetPersonalThrottleFlag() { personalThrottleFlag = true; }
 	
 	private function ResetFromBeneathThrottleFlag() { fromBeneathThrottleFlag = true; }
 	
@@ -1190,6 +1276,18 @@ class com.theck.ALIA.ALIA
 		}
 	}
 	
+	public function PlayHulkWarningSound() {
+		//PlaySingleMobileNegative();
+		for ( var i:Number = 0; i < 5; i ++ )
+		{
+			setTimeout(Delegate.create(this, PlaySingleMobileNegative), i*300);
+		}
+		//setTimeout(Delegate.create(this, PlaySingleMobileNegative), 400);
+		//setTimeout(Delegate.create(this, PlaySingleMobileNegative), 800);
+		//setTimeout(Delegate.create(this, PlaySingleMobileNegative), 1500);
+		//setTimeout(Delegate.create(this, PlaySingleMobileNegative), 1000);
+	}
+	
 	public function ResetFromBeneathWarningSoundFlag() {
 		fromBeneathSoundAlreadyPlaying = false;
 	}
@@ -1200,6 +1298,10 @@ class com.theck.ALIA.ALIA
 	
 	public function PlaySingleMobilePositive() {
 		com.GameInterface.Game.Character.GetClientCharacter().AddEffectPackage("sound_fx_package_mobile_positive_feedback.xml");
+	}
+	
+	public function PlaySingleMobileNegative() {
+		com.GameInterface.Game.Character.GetClientCharacter().AddEffectPackage("sound_fx_package_mobile_negative_feedback.xml");
 	}
 	
 	public function PlayMobilePhoneTone6() {
@@ -1213,6 +1315,14 @@ class com.theck.ALIA.ALIA
 	}
 	public function PlayMobilePhoneTone9() {
 		com.GameInterface.Game.Character.GetClientCharacter().AddEffectPackage("sound_fx_package_mobile_phone_button_9.xml");
+	}
+	
+	public function PlayChainsawSound() {		
+		com.GameInterface.Game.Character.GetClientCharacter().AddEffectPackage("sound_fxpackage_GUI_item_equip_chainsaw.xml");
+	}
+	
+	public function PlayWhipSound() {		
+		com.GameInterface.Game.Character.GetClientCharacter().AddEffectPackage("sound_fxpackage_GUI_item_equip_whip.xml");
 	}
 	
 	public function SummonDrone() {
@@ -1274,6 +1384,12 @@ class com.theck.ALIA.ALIA
 			countdownTimer = new SimpleCounter("ALIA", m_swfRoot, 30);
 			countdownTimer.SetTime(10, 0, 0);
 			DebugText("Countdown Timer created");
+		}
+		
+		// if the lurker cast bar doesn't exist, create it
+		if ( !lurkerCastBar ) {
+			lurkerCastBar = new SimpleBar("lurkerCastSimpleBar", m_swfRoot, 600, 600, 280, 16);
+			DebugText("Lurker Cast Bar created");
 		}
 		
 		// Set default text
@@ -1416,6 +1532,21 @@ class com.theck.ALIA.ALIA
 		DebugText("TimerStopDrag: x: " + t_pos.x + "  y: " + t_pos.y);
     }
 	
+    public function CastBarStartDrag() {
+		DebugText("CastBarStartDrag called");
+        lurkerCastBar.m_frame.startDrag();
+    }
+
+    public function CastBarStopDrag() {
+		DebugText("CastBarStopDrag called");
+        lurkerCastBar.m_frame.stopDrag();
+		
+		// grab position for config storage on Deactivate()
+        cb_pos = Common.getOnScreen(lurkerCastBar.m_frame); 
+		
+		DebugText("CastBarStopDrag: x: " + cb_pos.x + "  y: " + cb_pos.y);
+    }
+	
 	
     public function ShowZuberi():Boolean {
 		if ( Boolean(showZuberi.GetValue()) || lurkerEliteLevel > 10 ) 
@@ -1441,6 +1572,7 @@ class com.theck.ALIA.ALIA
 		podDisplay.SetVisible(IsNYR());
 		barDisplay.SetVisible(IsNYR());
 		countdownTimer.SetVisible(IsNYR());
+		lurkerCastBar.SetVisible(IsNYR());
 		
 		//only editable in NYR
 		if IsNYR() 
@@ -1476,6 +1608,12 @@ class com.theck.ALIA.ALIA
 				countdownTimer.SetGUIEdit(true);
 				countdownTimer.clip.onPress = Delegate.create(this, TimerStartDrag);
 				countdownTimer.clip.onRelease = Delegate.create(this, TimerStopDrag);
+				
+				lurkerCastBar.SetVisible(true);
+				lurkerCastBar.ShowDragText(true);
+				lurkerCastBar.m_frame.onPress = Delegate.create(this, CastBarStartDrag);
+				lurkerCastBar.m_frame.onRelease = Delegate.create(this, CastBarStopDrag);
+				
 				
 				// set throttle variable - this prevents extra spam when the game calls GuiEdit event with false argument, which it seems to like to do ALL THE DAMN TIME
 				guiEditThrottle = true;
@@ -1517,6 +1655,11 @@ class com.theck.ALIA.ALIA
 				countdownTimer.clip.onRelease = undefined;
 				countdownTimer.SetGUIEdit(false);
 				countdownTimer.SetVisible(IsNYR());
+				
+				lurkerCastBar.ShowDragText(false);
+				lurkerCastBar.m_frame.onPress = undefined;
+				lurkerCastBar.m_frame.onRelease = undefined;
+				lurkerCastBar.SetVisible(false);
 				
 				// set throttle variable
 				guiEditThrottle = false;
