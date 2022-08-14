@@ -142,7 +142,7 @@ class com.theck.ALIA.ALIA
 	private var numShadows:Number;
 	private var numDownfalls:Number;
 	private var shadowThrottleFlag:Boolean = true;
-	private var personalThrottleFlag:Boolean = true;
+	//private var personalThrottleFlag:Boolean = true;
 	private var fromBeneathThrottleFlag:Boolean = true;
 	private var pureFilthThrottleFlag:Boolean = true;
 	private var downfallThrottleFlag:Boolean = true;
@@ -929,7 +929,7 @@ class com.theck.ALIA.ALIA
 		}
 		
 		// Personal Space
-		else if (spell == stringPersonalSpace && personalThrottleFlag)
+		else if (spell == stringPersonalSpace ) //&& personalThrottleFlag)
 		{
 			//if ( GetHealthPercent(lurker) < 0.68 ) {
 				
@@ -938,11 +938,11 @@ class com.theck.ALIA.ALIA
 			//}
 			
 			// reset throttle flag after 7 seconds (cast is only 5 seconds)
-			setTimeout(Delegate.create(this, ResetPersonalThrottleFlag), LOCKOUT_PERSONAL);
+			//setTimeout(Delegate.create(this, ResetPersonalThrottleFlag), LOCKOUT_PERSONAL);
 		}
 		
 		// Final Resort
-		else if (spell == stringFinalResort && personalThrottleFlag)
+		else if (spell == stringFinalResort ) //&& personalThrottleFlag)
 		{
 			// decay warning text and stop blinking effect when FR cast
 			warningController.DecayText(3);
@@ -950,7 +950,7 @@ class com.theck.ALIA.ALIA
 			warningController.SetTextColor(nowColor);
 			
 			// reset throttle flag after 7 seconds (cast is only 5 seconds)
-			setTimeout(Delegate.create(this, ResetPersonalThrottleFlag), LOCKOUT_PERSONAL);
+			//setTimeout(Delegate.create(this, ResetPersonalThrottleFlag), LOCKOUT_PERSONAL);
 		}
 		
 		// From Beneath You It Devours (pod)
@@ -1037,7 +1037,7 @@ class com.theck.ALIA.ALIA
 	
 	private function ResetShadowThrottleFlag() { shadowThrottleFlag = true; }
 	
-	private function ResetPersonalThrottleFlag() { personalThrottleFlag = true; }
+	//private function ResetPersonalThrottleFlag() { personalThrottleFlag = true; }
 	
 	private function ResetFromBeneathThrottleFlag() { fromBeneathThrottleFlag = true; }
 	
