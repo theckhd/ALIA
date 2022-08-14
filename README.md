@@ -3,13 +3,18 @@ This Secret World Legends addon provides announcements for important events in t
 
 ## Audible Warnings
 
-There are two audible warnings, each of which is a short sequence of beeps. They play when:
+There are three audible warnings, each of which is a short sequence of beeps. They play when:
 - Every time the lurker crosses a Personal Space threshold to warn of the impending cast (E10 only)
 - When the lurker casts From Beneath You It Devours (pod), mostly so cleansers in E10 know to cast Cleanup.
+- When a hulk spawns in phase 3 (disabled by default).
+These can be enabled and disabled using the following in-game commands:
+`/setoption alia_ps_sound (true/false)`
+`/setoption alia_pod_sound (true/false)`
+`/setoption alia_hulk_sound (true/false)`
 
 ## Displays
 
-Currently there are six displays that appear. The displays only appear when in the Manhattan Exclusion Zone, the addon basically goes to sleep outside of that zone.
+Currently there are seven displays that appear. The displays only appear when in the Manhattan Exclusion Zone, the addon basically goes to sleep outside of that zone.
 
 
 
@@ -68,6 +73,9 @@ Show remaining cooldowns on Pure Filth and From Beneath You It Devours (Pod). Au
 ![Countdown Display](screens/alia_countdown_display.PNG)
 
 Ten-minute countdown timer to help gague progress. Also to make those last-second kills even more epic.
+
+### Cast Bar
+A cast bar for the lurker that shows even when the lurker isn't your current target. Can be toggled using `/setoption alia_castbar (true/false)`
 
 ## Addon Layout
 The displays can be moved (click & drag) in GUIEdit mode, and save their position between sessions.
