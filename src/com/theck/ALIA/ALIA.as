@@ -36,7 +36,7 @@ import flash.geom.Point;
 class com.theck.ALIA.ALIA 
 {
 	// Version
-	static var version:String = "1.1.0";
+	static var version:String = "1.1.1";
 	
 	// toggle debug messages and enable addon outisde of NYR
 	static var debugMode:Boolean = false;
@@ -606,7 +606,7 @@ class com.theck.ALIA.ALIA
 			elevel = 17;
 		}
 		DebugText("GetLurkerEliteLevel(): Lurker found to be elevel = " + elevel + " (dynel112: " + lurker112 + ", max health: " + lurkerMaxHealth + ")");
-		Debugger.PrintText("GetLurkerEliteLevel(): Lurker found to be elevel = " + elevel + " (dynel112: " + lurker112 + ", max health: " + lurkerMaxHealth + ")");
+		//Debugger.PrintText("GetLurkerEliteLevel(): Lurker found to be elevel = " + elevel + " (dynel112: " + lurker112 + ", max health: " + lurkerMaxHealth + ")");
 		return elevel;
 	}
 	
