@@ -607,6 +607,9 @@ class com.theck.ALIA.ALIA
 		}
 		DebugText("GetLurkerEliteLevel(): Lurker found to be elevel = " + elevel + " (dynel112: " + lurker112 + ", max health: " + lurkerMaxHealth + ")");
 		//Debugger.PrintText("GetLurkerEliteLevel(): Lurker found to be elevel = " + elevel + " (dynel112: " + lurker112 + ", max health: " + lurkerMaxHealth + ")");
+		
+		// chat line for lurker detection confirmation
+		com.GameInterface.UtilsBase.PrintChatText("ALIA: E" + elevel + " lurker detected.");
 		return elevel;
 	}
 	
