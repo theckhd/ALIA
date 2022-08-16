@@ -483,7 +483,7 @@ class com.theck.ALIA.ALIA
 			break;
 		case "alia_hulk_sound":
 			playHulkWarningSound = dv;			
-			if ( loadFinished && fromBeneathSound.GetValue() ) { PlayHulkWarningSound(); };
+			if ( loadFinished && playHulkWarningSound.GetValue() ) { PlayHulkWarningSound(); };
 			break;
 		}
 		
@@ -517,10 +517,10 @@ class com.theck.ALIA.ALIA
 	private function DebuggingHack():Void {
 		// stupid hack for debugging purposes only
 		SummonDrone();
+		PlayHulkWarningSound();
 		if ( debugMode && debuggingHack.GetValue() ){ 
 			
 			
-			PlayHulkWarningSound();
 			//PlayPersonalSpaceSoonWarningSound();
 			
 			
@@ -731,7 +731,8 @@ class com.theck.ALIA.ALIA
 			// encounter state logic - detecting a hulk means at least phase 2
 			AdvanceEncounterState(2, "detecting a Hulk");
 			
-			if ( numHulks > 4 || encounterPhase > 2 ) && playHulkWarningSound.GetValue() {
+			DebugText("DetectNPCs(): encounterPhase = " + encounterPhase + ", pHWS.GV = " + playHulkWarningSound.GetValue() );
+			if ( ( numHulks > 4 || encounterPhase > 2 ) && playHulkWarningSound.GetValue() ) {
 				
 				// play sound for MBio
 				PlayHulkWarningSound();
@@ -756,9 +757,10 @@ class com.theck.ALIA.ALIA
 		}
 		
 		// unhook this function if we have all the NPCs 
-		if ( alex && rose && mei && zuberi && lurker ) { 
-			DisconnectVicinitySignals(); 
-		}
+		// Removed in 1.1.2 to allow for Hulk sounds in phase 3
+		//if ( alex && rose && mei && zuberi && lurker ) { 
+			//DisconnectVicinitySignals(); 
+		//}
 	}
 	
 	private function AdvanceEncounterState( state:Number, debugText:String ) {
