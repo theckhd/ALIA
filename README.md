@@ -75,7 +75,7 @@ Show remaining cooldowns on Pure Filth and From Beneath You It Devours (Pod). Au
 Ten-minute countdown timer to help gague progress. Also to make those last-second kills even more epic.
 
 ### Cast Bar
-A cast bar for the lurker that shows even when the lurker isn't your current target. Can be toggled using `/setoption alia_castbar (true/false)`
+A cast bar for the lurker that shows even when the lurker isn't your current target. Can be toggled using `/setoption alia_castbar (true/false)` and resized using `/setoption alia_castbar_scale #` (default: 1)
 
 ## Addon Layout
 The displays can be moved (click & drag) in GUIEdit mode, and save their position between sessions.
