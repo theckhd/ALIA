@@ -166,6 +166,7 @@ class com.theck.ALIA.ALIA
 	private var showNPCNames:DistributedValue;
 	private var showShadowBar:DistributedValue;
 	private var showCastBar:DistributedValue;
+	private var castBarScale:DistributedValue;
 	private var playHulkWarningSound:DistributedValue;
 	private var debuggingHack:DistributedValue;
 
@@ -319,6 +320,7 @@ class com.theck.ALIA.ALIA
 		showNPCNames = DistributedValue.Create("alia_shownames");
 		showShadowBar = DistributedValue.Create("alia_shadowbar");
 		showCastBar = DistributedValue.Create("alia_castbar");
+		castBarScale = DistributedValue.Create("alia_castbar_scale");
 		playHulkWarningSound = DistributedValue.Create("alia_hulk_sound");
 		
 		// new options get added above this line
@@ -336,6 +338,7 @@ class com.theck.ALIA.ALIA
 		showNPCNames.SignalChanged.Connect(SettingsChanged, this);
 		showShadowBar.SignalChanged.Connect(SettingsChanged, this);
 		showCastBar.SignalChanged.Connect(SettingsChanged, this);
+		castBarScale.SignalChanged.Connect(SettingsChanged, this);
 		playHulkWarningSound.SignalChanged.Connect(SettingsChanged, this);
 		
 		// new options get added above this line
@@ -353,6 +356,7 @@ class com.theck.ALIA.ALIA
 		showNPCNames.SignalChanged.Disconnect(SettingsChanged, this);
 		showShadowBar.SignalChanged.Disconnect(SettingsChanged, this);
 		showCastBar.SignalChanged.Disconnect(SettingsChanged, this);
+		castBarScale.SignalChanged.Disconnect(SettingsChanged, this);
 		playHulkWarningSound.SignalChanged.Disconnect(SettingsChanged, this);
 		
 		// new options get added above this line
@@ -393,6 +397,7 @@ class com.theck.ALIA.ALIA
 		showNPCNames.SetValue( config.FindEntry("alia_showNPCNames", true));
 		showShadowBar.SetValue( config.FindEntry("alia_shadowbar", false) );
 		showCastBar.SetValue( config.FindEntry("alia_castbar", true) );
+		castBarScale.SetValue( config.FindEntry("alia_castbar_scale", 1.0 ) );
 		playHulkWarningSound.SetValue( config.FindEntry("alia_hulk_sound", false) );
 		
 		// any options that need to be passed to other classes need to be handled here
@@ -425,6 +430,7 @@ class com.theck.ALIA.ALIA
 		config.AddEntry("alia_showNPCNames", showNPCNames.GetValue());
 		config.AddEntry("alia_shadowbar", showShadowBar.GetValue());
 		config.AddEntry("alia_castbar", showCastBar.GetValue());
+		config.AddEntry("alia_castbar_scale", castBarScale.GetValue());
 		
 		return config
 	}
@@ -468,6 +474,12 @@ class com.theck.ALIA.ALIA
 			showCastBar = dv;
 			lurkerCastBar.SetVisible( showCastBar.GetValue() );
 			GuiEdit();
+			break;
+		case "alia_castbar_scale":
+			castBarScale = dv;
+			lurkerCastBar.m_frame.removeMovieClip();
+			lurkerCastBar = undefined;
+			CreateGuiElements();
 			break;
 		case "alia_hulk_sound":
 			playHulkWarningSound = dv;			
@@ -1391,7 +1403,13 @@ class com.theck.ALIA.ALIA
 		
 		// if the lurker cast bar doesn't exist, create it
 		if ( !lurkerCastBar ) {
-			lurkerCastBar = new SimpleBar("lurkerCastSimpleBar", m_swfRoot, 600, 600, 280, 16);
+			var barWidth:Number;
+			var barFont:Number;
+			
+			barWidth = Math.round(280 * castBarScale.GetValue());
+			barFont = Math.round(16 * castBarScale.GetValue() );
+			
+			lurkerCastBar = new SimpleBar("lurkerCastSimpleBar", m_swfRoot, 600, 600, barWidth, barFont);
 			DebugText("Lurker Cast Bar created");
 		}
 		
@@ -1575,7 +1593,7 @@ class com.theck.ALIA.ALIA
 		podDisplay.SetVisible(IsNYR());
 		barDisplay.SetVisible(IsNYR());
 		countdownTimer.SetVisible(IsNYR());
-		lurkerCastBar.SetVisible(IsNYR());
+		lurkerCastBar.SetVisible(IsNYR() && state); // this might not be necessary
 		
 		//only editable in NYR
 		if IsNYR() 
