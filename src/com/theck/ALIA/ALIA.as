@@ -517,8 +517,8 @@ class com.theck.ALIA.ALIA
 	private function DebuggingHack():Void {
 		// stupid hack for debugging purposes only
 		SummonDrone();
-		PlayHulkWarningSound();
 		if ( debugMode && debuggingHack.GetValue() ){ 
+			PlayHulkWarningSound();
 			
 			
 			//PlayPersonalSpaceSoonWarningSound();
